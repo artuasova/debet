@@ -167,15 +167,20 @@
         <!-- Заголовок приложения -->
         <h1 class="text-3xl font-bold text-center my-8 text-blue-800">Финансовый помощник</h1>
 
-        <!-- Блок с вкладками -->
-        <div class="flex justify-center bg-gray-200 p-2 rounded-xl mb-4">
-            <button id="main-tab" class="tab-btn active">Главная</button>
-            <button id="income-tab" class="tab-btn">Доходы</button>
-            <button id="debts-tab" class="tab-btn">Долги</button>
+        <!-- Индикатор загрузки -->
+        <div id="loading-indicator" class="flex justify-center items-center h-48">
+            <p class="text-gray-500 text-lg">Загрузка...</p>
         </div>
 
         <!-- Контейнер для основного контента -->
-        <div id="content-container">
+        <div id="content-container" class="hidden">
+            <!-- Блок с вкладками -->
+            <div class="flex justify-center bg-gray-200 p-2 rounded-xl mb-4">
+                <button id="main-tab" class="tab-btn active">Главная</button>
+                <button id="income-tab" class="tab-btn">Доходы</button>
+                <button id="debts-tab" class="tab-btn">Долги</button>
+            </div>
+
             <!-- Главная вкладка -->
             <div id="main-content">
                 <!-- Карточка с балансом -->
@@ -312,6 +317,8 @@
         const confirmOkBtn = document.getElementById('confirm-ok-btn');
         const notificationContainer = document.getElementById('notification-container');
         const notificationMessage = document.getElementById('notification-message');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const contentContainer = document.getElementById('content-container');
         
         // --- Переменные для данных ---
         let allIncome = [];
@@ -438,7 +445,7 @@
                 }
             });
 
-            const projectedIncome = allIncome.find(inc => inc.title === 'Зарплата')?.amount || 0;
+            const projectedIncome = allIncome.find(inc => inc.title.toLowerCase().includes('зарплата'))?.amount || 0;
             document.getElementById('projected-income').textContent = `${projectedIncome.toLocaleString('ru-RU')} ₽`;
             document.getElementById('total-expenses').textContent = `${totalExpenses.toLocaleString('ru-RU')} ₽`;
             
@@ -657,6 +664,10 @@
                 setTimeout(setupFirestoreListeners, 500);
                 return;
             }
+            
+            // Если все готово, скрываем индикатор загрузки и показываем контент
+            loadingIndicator.classList.add('hidden');
+            contentContainer.classList.remove('hidden');
 
             // Слушатель для доходов
             const incomeCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/income`);
