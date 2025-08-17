@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет Долгов</title>
-    <!-- Tailwind CSS для стилей -->
+    <title>Финансовый помощник</title>
+    <!-- Подключение Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+    <!-- Настройка шрифта Inter -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f0f4f8;
@@ -131,11 +131,11 @@
             <div id="main-content">
                 <!-- Карточка с балансом -->
                 <div class="card bg-blue-600 text-white flex flex-col items-center">
-                    <h2 class="text-xl font-bold">Остаток до следующей зарплаты</h2>
+                    <h2 class="text-xl font-bold">Остаток на следующий месяц</h2>
                     <p class="text-4xl font-extrabold mt-2" id="remaining-balance">0 ₽</p>
                     <div class="flex justify-between w-full mt-4 text-sm font-semibold">
-                        <span>Прогнозируемая ЗП: <span id="projected-income">0 ₽</span></span>
-                        <span>Расходы: <span id="total-expenses">0 ₽</span></span>
+                        <span>Прогноз доходов: <span id="projected-income">0 ₽</span></span>
+                        <span>Прогноз расходов: <span id="total-expenses">0 ₽</span></span>
                     </div>
                 </div>
 
@@ -251,7 +251,7 @@
         const notificationContainer = document.getElementById('notification-container');
         const notificationMessage = document.getElementById('notification-message');
         
-        // --- Переменные для данных, теперь хранятся в памяти и Local Storage ---
+        // --- Переменные для данных, хранятся в Local Storage ---
         let allIncome = [];
         let allDebts = [];
         let upcomingPaymentsData = [];
@@ -308,40 +308,50 @@
         // --- Логика расчетов ---
         function calculateRemainingBalance() {
             const today = new Date();
-            const twoWeeksFromNow = new Date();
-            twoWeeksFromNow.setDate(today.getDate() + 14);
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
 
             let totalIncome = 0;
             let totalExpenses = 0;
             upcomingPaymentsData = [];
 
-            // Расчет доходов
+            // Расчет доходов на следующий месяц
             allIncome.forEach(item => {
                 const payDate = new Date(item.payDate);
-                let currentItemIncome = 0;
-                if (payDate >= today && payDate <= twoWeeksFromNow) {
-                    if (item.frequency === 'bi-weekly') {
-                        currentItemIncome = item.amount;
-                    } else if (item.frequency === 'monthly') {
-                        currentItemIncome = item.amount;
-                    } else if (item.frequency === 'once') {
-                        currentItemIncome = item.amount;
-                    }
-                    totalIncome += currentItemIncome;
+                if (item.frequency === 'once' && payDate.getMonth() === nextMonth.getMonth() && payDate.getFullYear() === nextMonth.getFullYear()) {
+                    totalIncome += item.amount;
+                } else if (item.frequency === 'monthly') {
+                    totalIncome += item.amount;
+                } else if (item.frequency === 'bi-weekly') {
+                     // Упрощенный расчет для 2х недель, можно сделать точнее
+                    totalIncome += item.amount * 2;
                 }
             });
             
-            // Расчет обязательных расходов
+            // Расчет обязательных расходов на следующий месяц
             allDebts.forEach(item => {
                 const dueDate = new Date(item.dueDate);
-                if (dueDate >= today && dueDate <= twoWeeksFromNow) {
+                if (item.frequency === 'once' && dueDate.getMonth() === nextMonth.getMonth() && dueDate.getFullYear() === nextMonth.getFullYear()) {
                     totalExpenses += item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate });
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate, type: 'debt' });
+                } else if (item.frequency === 'monthly') {
+                    totalExpenses += item.amount;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate, type: 'debt' });
+                } else if (item.frequency === 'bi-weekly') {
+                    totalExpenses += item.amount * 2;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate, type: 'debt' });
                 }
             });
 
-            const projectedIncome = allIncome.find(inc => inc.title.toLowerCase().includes('зарплата'))?.amount || 0;
-            document.getElementById('projected-income').textContent = `${projectedIncome.toLocaleString('ru-RU')} ₽`;
+            // Добавляем доходы в список предстоящих платежей для отображения
+            allIncome.forEach(item => {
+                const payDate = new Date(item.payDate);
+                if (item.frequency === 'monthly' || item.frequency === 'bi-weekly' || (item.frequency === 'once' && payDate.getMonth() === nextMonth.getMonth())) {
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.payDate, type: 'income' });
+                }
+            });
+
+            document.getElementById('projected-income').textContent = `${totalIncome.toLocaleString('ru-RU')} ₽`;
             document.getElementById('total-expenses').textContent = `${totalExpenses.toLocaleString('ru-RU')} ₽`;
             
             const remaining = totalIncome - totalExpenses;
@@ -362,14 +372,15 @@
             } else {
                 upcomingPaymentsData.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
                 upcomingPaymentsData.forEach(payment => {
+                    const isIncome = payment.type === 'income';
                     const paymentEl = document.createElement('div');
-                    paymentEl.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg';
+                    paymentEl.className = `flex justify-between items-center bg-gray-50 p-3 rounded-lg ${isIncome ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`;
                     paymentEl.innerHTML = `
                         <div>
                             <p class="font-bold">${payment.title}</p>
                             <p class="text-sm text-gray-500">${new Date(payment.dueDate).toLocaleDateString('ru-RU')}</p>
                         </div>
-                        <p class="font-bold text-red-600">${payment.amount.toLocaleString('ru-RU')} ₽</p>
+                        <p class="font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}">${isIncome ? '+' : '-'}${payment.amount.toLocaleString('ru-RU')} ₽</p>
                     `;
                     container.appendChild(paymentEl);
                 });
@@ -383,14 +394,21 @@
         }
 
         function loadDataFromLocalStorage() {
-            const incomeData = localStorage.getItem('allIncome');
-            const debtsData = localStorage.getItem('allDebts');
-            
-            if (incomeData) {
-                allIncome = JSON.parse(incomeData);
-            }
-            if (debtsData) {
-                allDebts = JSON.parse(debtsData);
+            try {
+                const incomeData = localStorage.getItem('allIncome');
+                const debtsData = localStorage.getItem('allDebts');
+                
+                if (incomeData) {
+                    allIncome = JSON.parse(incomeData);
+                }
+                if (debtsData) {
+                    allDebts = JSON.parse(debtsData);
+                }
+            } catch (e) {
+                console.error("Failed to load data from Local Storage", e);
+                // Если произошла ошибка, сбросить данные
+                allIncome = [];
+                allDebts = [];
             }
         }
 
