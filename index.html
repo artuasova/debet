@@ -3,646 +3,3094 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Финансовый помощник</title>
-    <!-- Подключение Tailwind CSS -->
+    <title>ДолгоТрекер Pro - Учет финансов</title>
+    <meta name="description" content="Умное PWA приложение для учета финансов">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Настройка шрифта Inter -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8;
-            color: #1e293b;
-            margin: 0;
-            padding: 0;
-            transition: background-color 0.3s ease;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .container {
-            max-width: 600px;
-            margin: auto;
-            padding: 24px;
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        .slide-in { animation: slideIn 0.3s ease-out; }
         .card {
-            background-color: white;
-            border-radius: 1.5rem; /* Более округлые углы */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Более мягкая тень */
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem; /* Более округлые углы */
-            transition: border-color 0.2s ease;
-        }
-        .form-input:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-        }
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem; /* Более округлые углы */
-            font-weight: 600; /* Более жирный шрифт */
-            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-        }
-        .btn-primary {
-            background-color: #2563eb;
-            color: white;
-            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
-        }
-        .btn-primary:hover {
-            background-color: #1d4ed8;
+        .card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        .btn-danger {
-            background-color: #ef4444;
-            color: white;
-            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #e5e7eb;
         }
-        .btn-danger:hover {
-            background-color: #dc2626;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(239, 68, 68, 0.4);
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .notification-container {
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .notification {
             position: fixed;
-            bottom: 20px;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        .chart-bar {
+            height: 200px;
+            display: flex;
+            align-items: end;
+            gap: 4px;
+            padding: 20px 0;
+        }
+        .chart-bar-item {
+            flex: 1;
+            background: linear-gradient(to top, #4f46e5, #818cf8);
+            border-radius: 4px 4px 0 0;
+            min-width: 30px;
+            position: relative;
+            cursor: pointer;
+        }
+        .chart-bar-item.income {
+            background: linear-gradient(to top, #10b981, #34d399);
+        }
+        .chart-bar-item.expense {
+            background: linear-gradient(to top, #ef4444, #f87171);
+        }
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #10b981;
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 15px 25px;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
             opacity: 0;
-            transition: opacity 0.5s ease-in-out;
+            transition: opacity 0.2s;
             pointer-events: none;
+            z-index: 10;
         }
-        .notification-container.show {
+        .chart-bar-item:hover .tooltip {
             opacity: 1;
         }
-        .modal {
+        .payment-urgency-10 {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+        }
+        .payment-urgency-5 {
+            background-color: #fef3c7;
+            border-color: #f59e0b;
+        }
+        .payment-urgency-3 {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            animation: pulse 2s infinite;
+        }
+        .floating-btn {
             position: fixed;
-            top: 0;
-            left: 0;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+        }
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6);
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .goal-progress {
+            position: relative;
+            height: 12px;
+            background: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .goal-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            z-index: 1000;
+        }
+        .pulse-animation {
+            animation: bounce 2s infinite;
+        }
+        .dark-mode {
+            background: linear-gradient(to bottom right, #1e293b, #0f172a);
+            color: #e2e8f0;
+        }
+        .dark-mode .card {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        .dark-mode .search-input {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        .dark-mode .filter-btn {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        .dark-mode .filter-btn.active {
+            background: #4f46e5;
+        }
+        .dark-mode .border {
+            border-color: #475569 !important;
+        }
+        .dark-mode .bg-white {
+            background: #1e293b !important;
+        }
+        .dark-mode .text-gray-800 {
+            color: #f1f5f9 !important;
+        }
+        .dark-mode .text-gray-600 {
+            color: #94a3b8 !important;
+        }
+        .dark-mode .text-gray-500 {
+            color: #64748b !important;
+        }
+        .dark-mode .bg-gray-50 {
+            background: #334155 !important;
+        }
+        .dark-mode .bg-gray-100 {
+            background: #475569 !important;
+        }
+        .dark-mode .bg-gray-200 {
+            background: #64748b !important;
+        }
+        .pie-chart-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        .pie-segment {
+            position: absolute;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%);
+        }
+        .pie-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 50%;
             display: flex;
-            justify-content: center;
             align-items: center;
-            z-index: 2000;
-            transition: opacity 0.3s ease;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            width: 90%;
-            max-width: 500px;
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 20px;
         }
-        .tab-btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            color: #4b5563;
-            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4f46e5;
         }
-        .tab-btn.active {
-            background-color: white;
-            color: #2563eb;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        .timeline-item:after {
+            content: '';
+            position: absolute;
+            left: 13px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% + 10px);
+            background: #e5e7eb;
         }
-        .tab-btn:hover:not(.active) {
-            background-color: #e5e7eb;
+        .timeline-item:last-child:after {
+            display: none;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-
-    <div class="container pb-20">
-        <!-- Заголовок приложения -->
-        <h1 class="text-3xl font-bold text-center my-8 text-blue-800">Финансовый помощник</h1>
-
-        <!-- Контейнер для основного контента -->
-        <div id="content-container">
-            <!-- Блок с вкладками -->
-            <div class="flex justify-center bg-gray-200 p-2 rounded-xl mb-4">
-                <button id="main-tab" class="tab-btn active">Главная</button>
-                <button id="income-tab" class="tab-btn">Доходы</button>
-                <button id="debts-tab" class="tab-btn">Долги</button>
-            </div>
-
-            <!-- Главная вкладка -->
-            <div id="main-content">
-                <!-- Карточка с балансом -->
-                <div class="card bg-gradient-to-r from-blue-600 to-blue-500 text-white flex flex-col items-center transform scale-100 hover:scale-[1.01] transition-transform">
-                    <h2 class="text-xl font-bold">Остаток на следующий месяц</h2>
-                    <p class="text-5xl font-extrabold mt-2 tracking-wide" id="remaining-balance">0 ₽</p>
-                    <div class="flex justify-between w-full mt-4 text-sm font-semibold">
-                        <span>Прогноз доходов: <span id="projected-income">0 ₽</span></span>
-                        <span>Прогноз расходов: <span id="total-expenses">0 ₽</span></span>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Шапка -->
+        <header class="mb-8 text-center">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white mr-3">
+                        <i class="fas fa-wallet text-2xl"></i>
                     </div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        ДолгоТрекер Pro
+                    </h1>
                 </div>
-
-                <!-- Карточка с предстоящими платежами -->
-                <div class="card">
-                    <h2 class="text-xl font-bold mb-4">Предстоящие платежи</h2>
-                    <div id="upcoming-payments" class="space-y-4">
-                        <p class="text-gray-500 text-center">Нет предстоящих платежей.</p>
-                    </div>
+                <div class="flex items-center space-x-3">
+                    <button id="dark-mode-toggle" class="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="export-data" class="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button id="import-data" class="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50">
+                        <i class="fas fa-upload"></i>
+                    </button>
                 </div>
             </div>
+            <p class="text-gray-600 max-w-2xl mx-auto">Умный учет финансов для финансовой стабильности</p>
+        </header>
 
-            <!-- Вкладка Доходы -->
-            <div id="income-content" class="hidden">
-                <div class="card">
-                    <h2 class="text-xl font-bold mb-4">Добавить доход</h2>
-                    <form id="income-form" class="space-y-4">
-                        <input type="hidden" id="income-id">
-                        <input type="text" id="income-title" class="form-input" placeholder="Название (например, Зарплата)" required>
-                        <textarea id="income-description" class="form-input" placeholder="Описание (необязательно)"></textarea>
-                        <input type="number" id="income-amount" class="form-input" placeholder="Сумма" required min="0">
-                        <select id="income-frequency" class="form-input" required>
-                            <option value="">Выберите частоту</option>
-                            <option value="bi-weekly">Раз в 2 недели</option>
-                            <option value="monthly">Ежемесячно</option>
-                            <option value="once">Однократно</option>
-                        </select>
-                        <input type="date" id="income-date" class="form-input" required>
-                        <button type="submit" class="btn btn-primary w-full" id="save-income-btn">Сохранить</button>
-                    </form>
+        <!-- Навигация -->
+        <nav class="mb-8 sticky top-0 z-10 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm p-2">
+            <div class="flex flex-wrap justify-center gap-1">
+                <button id="nav-dashboard" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-home mr-2"></i>Главная
+                </button>
+                <button id="nav-goals" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-bullseye mr-2"></i>Цели
+                </button>
+                <button id="nav-income" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-arrow-down mr-2"></i>Доходы
+                </button>
+                <button id="nav-expenses" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-arrow-up mr-2"></i>Расходы
+                </button>
+                <button id="nav-analytics" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-chart-line mr-2"></i>Аналитика
+                </button>
+                <button id="nav-calendar" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-calendar-alt mr-2"></i>Календарь
+                </button>
+                <button id="nav-settings" class="nav-btn flex items-center px-4 py-2 rounded-lg text-center font-medium transition-all">
+                    <i class="fas fa-cog mr-2"></i>Настройки
+                </button>
+            </div>
+        </nav>
+
+        <!-- Основной контент -->
+        <main id="main-content">
+            <!-- Главная страница -->
+            <div id="dashboard-page">
+                <!-- Сводка -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-lg bg-indigo-100 text-indigo-600 mr-4">
+                                <i class="fas fa-wallet text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Баланс</div>
+                                <div class="text-2xl font-bold text-gray-800" id="current-balance">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-lg bg-green-100 text-green-600 mr-4">
+                                <i class="fas fa-arrow-down text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Доходы/мес</div>
+                                <div class="text-2xl font-bold text-gray-800" id="monthly-income">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-lg bg-red-100 text-red-600 mr-4">
+                                <i class="fas fa-arrow-up text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Расходы/мес</div>
+                                <div class="text-2xl font-bold text-gray-800" id="monthly-expenses">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-lg bg-blue-100 text-blue-600 mr-4">
+                                <i class="fas fa-calendar-day text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">До зарплаты</div>
+                                <div class="text-2xl font-bold text-gray-800"><span id="days-to-salary">0</span> дней</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card mt-4">
-                    <h2 class="text-xl font-bold mb-4">Мои доходы</h2>
+                
+                <!-- Прогресс-бар и финансовая стабильность -->
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Финансовая стабильность</h3>
+                    <div class="mb-2">
+                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                            <span>Уровень стабильности</span>
+                            <span id="stability-percent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="stability-bar" class="progress-fill bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2" id="stability-message">
+                        Добавьте доходы и расходы для анализа
+                    </div>
+                </div>
+                
+                <!-- Цели и достижения -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Финансовые цели</h3>
+                            <button id="add-goal-btn" class="text-indigo-600 hover:text-indigo-800">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div id="goals-list" class="space-y-4">
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fas fa-bullseye text-2xl mb-2"></i>
+                                <p>У вас пока нет целей</p>
+                                <button id="add-first-goal" class="mt-2 text-indigo-600 hover:text-indigo-800 text-sm">
+                                    Добавить первую цель
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Последние достижения</h3>
+                        <div id="achievements-list" class="space-y-3">
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fas fa-trophy text-2xl mb-2"></i>
+                                <p>Пока нет достижений</p>
+                                <p class="text-sm mt-1">Достигайте целей для получения наград</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- График доходов и расходов -->
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Доходы и расходы по месяцам</h3>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200" data-period="3">3 мес</button>
+                            <button class="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded-lg" data-period="6">6 мес</button>
+                            <button class="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200" data-period="12">12 мес</button>
+                        </div>
+                    </div>
+                    <div id="income-expense-chart" class="chart-bar">
+                        <div class="text-center text-gray-500 w-full py-16">
+                            <i class="fas fa-chart-bar text-3xl mb-3"></i>
+                            <p>Недостаточно данных для отображения графика</p>
+                            <p class="text-sm mt-2">Добавьте доходы и расходы</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ближайшие платежи -->
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Ближайшие платежи</h3>
+                        <span class="text-sm text-gray-500" id="payments-count">0 платежей</span>
+                    </div>
+                    <div id="upcoming-payments" class="space-y-3">
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-check text-gray-400"></i>
+                            <p class="text-gray-500">Нет запланированных платежей</p>
+                            <p class="text-sm text-gray-400 mt-2">Добавьте расходы для отслеживания</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Краткая статистика -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-600">Сбережения/мес</div>
+                                <div class="text-2xl font-bold text-green-600" id="monthly-savings">0 ₽</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-green-100 text-green-600">
+                                <i class="fas fa-piggy-bank"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-600">Бюджет</div>
+                                <div class="text-2xl font-bold text-blue-600" id="budget-status">0%</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-blue-100 text-blue-600">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-white rounded-xl shadow-md p-6 card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-600">Тренд</div>
+                                <div class="text-2xl font-bold text-purple-600" id="trend-indicator">0%</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-purple-100 text-purple-600">
+                                <i class="fas fa-arrow-trend-up"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Страница целей -->
+            <div id="goals-page" class="hidden">
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Финансовые цели</h2>
+                            <p class="text-gray-600">Планируйте и достигайте финансовых целей</p>
+                        </div>
+                        <button id="add-goal-main-btn" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition duration-200 flex items-center shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Добавить цель
+                        </button>
+                    </div>
+                    
+                    <div id="goals-main-list" class="space-y-4">
+                        <div class="empty-state">
+                            <i class="fas fa-bullseye text-gray-400"></i>
+                            <p class="text-gray-500">У вас пока нет финансовых целей</p>
+                            <p class="text-sm text-gray-400 mt-2">Создайте первую цель для начала пути к финансовой свободе</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Страница доходов -->
+            <div id="income-page" class="hidden">
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Источники дохода</h2>
+                            <p class="text-gray-600">Управляйте своими финансовыми потоками</p>
+                        </div>
+                        <button id="add-income-btn" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition duration-200 flex items-center shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Добавить доход
+                        </button>
+                    </div>
+                    
                     <div id="income-list" class="space-y-4">
-                        <p class="text-gray-500 text-center">Список доходов пуст.</p>
+                        <div class="empty-state">
+                            <i class="fas fa-arrow-down text-gray-400"></i>
+                            <p class="text-gray-500">У вас пока нет источников дохода</p>
+                            <p class="text-sm text-gray-400 mt-2">Добавьте свои источники дохода</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Вкладка Долги -->
-            <div id="debts-content" class="hidden">
-                <div class="card">
-                    <h2 class="text-xl font-bold mb-4">Добавить долг</h2>
-                    <form id="debt-form" class="space-y-4">
-                        <input type="hidden" id="debt-id">
-                        <input type="text" id="debt-title" class="form-input" placeholder="Название (например, Ипотека)" required>
-                        <textarea id="debt-description" class="form-input" placeholder="Описание (необязательно)"></textarea>
-                        <input type="number" id="debt-amount" class="form-input" placeholder="Сумма" required min="0">
-                        <select id="debt-category" class="form-input" required>
-                            <option value="">Выберите категорию</option>
-                            <option value="mortgage">Ипотека</option>
-                            <option value="loan">Кредит</option>
-                            <option value="credit_card">Кредитная карта</option>
-                            <option value="person">Людям</option>
-                            <option value="utility">Счета/Коммуналка</option>
+            <!-- Страница расходов -->
+            <div id="expenses-page" class="hidden">
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Расходы</h2>
+                            <p class="text-gray-600">Управляйте своими финансовыми обязательствами</p>
+                        </div>
+                        <button id="add-expense-btn" class="bg-gradient-to-r from-red-600 to-rose-600 text-white py-2 px-4 rounded-lg hover:from-red-700 hover:to-rose-700 transition duration-200 flex items-center shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Добавить расход
+                        </button>
+                    </div>
+                    
+                    <div id="expenses-list" class="space-y-4">
+                        <div class="empty-state">
+                            <i class="fas fa-arrow-up text-gray-400"></i>
+                            <p class="text-gray-500">У вас пока нет расходов</p>
+                            <p class="text-sm text-gray-400 mt-2">Добавьте свои финансовые обязательства</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Страница аналитики -->
+            <div id="analytics-page" class="hidden">
+                <div class="bg-white rounded-xl shadow-md p-6 card mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Финансовая аналитика</h2>
+                    
+                    <!-- Основные метрики -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                            <div class="text-sm text-blue-600 mb-1">Общий доход</div>
+                            <div class="text-2xl font-bold text-blue-800" id="total-income">0 ₽</div>
+                            <div class="text-xs text-blue-700 mt-1">за последние 6 месяцев</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-red-50 to-rose-50 rounded-lg p-4 border border-red-200">
+                            <div class="text-sm text-red-600 mb-1">Общие расходы</div>
+                            <div class="text-2xl font-bold text-red-800" id="total-expenses">0 ₽</div>
+                            <div class="text-xs text-red-700 mt-1">за последние 6 месяцев</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                            <div class="text-sm text-green-600 mb-1">Чистая прибыль</div>
+                            <div class="text-2xl font-bold text-green-800" id="net-profit">0 ₽</div>
+                            <div class="text-xs text-green-700 mt-1">за последние 6 месяцев</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Распределение расходов -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Распределение расходов по категориям</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <div id="expense-distribution-chart" class="flex justify-center">
+                                    <div class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-chart-pie text-2xl mb-2"></i>
+                                        <p>Нет данных для диаграммы</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div id="expense-categories-list" class="space-y-3">
+                                    <div class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-list text-2xl mb-2"></i>
+                                        <p>Нет категорий расходов</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- История транзакций -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">История транзакций</h3>
+                        <div id="transactions-history" class="space-y-3">
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fas fa-history text-2xl mb-2"></i>
+                                <p>Нет транзакций для отображения</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Тренды -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Финансовые тренды</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="flex items-center mb-2">
+                                    <div class="p-2 bg-green-100 text-green-600 rounded-lg mr-3">
+                                        <i class="fas fa-arrow-up"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-800">Рост доходов</div>
+                                        <div class="text-sm text-gray-600">Последние 3 месяца</div>
+                                    </div>
+                                </div>
+                                <div class="text-2xl font-bold text-green-600" id="income-trend">+0%</div>
+                                <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                    <div id="income-trend-bar" class="bg-green-500 h-2 rounded-full" style="width: 50%"></div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="flex items-center mb-2">
+                                    <div class="p-2 bg-red-100 text-red-600 rounded-lg mr-3">
+                                        <i class="fas fa-arrow-down"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-800">Снижение расходов</div>
+                                        <div class="text-sm text-gray-600">Последние 3 месяца</div>
+                                    </div>
+                                </div>
+                                <div class="text-2xl font-bold text-red-600" id="expense-trend">-0%</div>
+                                <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                    <div id="expense-trend-bar" class="bg-red-500 h-2 rounded-full" style="width: 50%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Страница календаря -->
+            <div id="calendar-page" class="hidden">
+                <div class="bg-white rounded-xl shadow-md p-6 card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Календарь платежей</h2>
+                        <div class="flex gap-2">
+                            <button id="prev-month" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button id="current-month" class="px-4 py-2 font-medium">Ноябрь 2024</button>
+                            <button id="next-month" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-7 gap-1 mb-4">
+                        <div class="text-center font-medium text-gray-600 py-2">Пн</div>
+                        <div class="text-center font-medium text-gray-600 py-2">Вт</div>
+                        <div class="text-center font-medium text-gray-600 py-2">Ср</div>
+                        <div class="text-center font-medium text-gray-600 py-2">Чт</div>
+                        <div class="text-center font-medium text-gray-600 py-2">Пт</div>
+                        <div class="text-center font-medium text-gray-600 py-2">Сб</div>
+                        <div class="text-center font-medium text-gray-600 py-2">Вс</div>
+                    </div>
+                    
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1">
+                        <!-- Календарь будет сгенерирован динамически -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Страница настроек -->
+            <div id="settings-page" class="hidden">
+                <div class="bg-white rounded-xl shadow-md p-6 card">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Настройки приложения</h2>
+                    
+                    <div class="space-y-6">
+                        <!-- Уведомления -->
+                        <div class="border-b border-gray-200 pb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Уведомления</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium text-gray-800">Напоминания о платежах</div>
+                                        <div class="text-sm text-gray-600">Уведомления за 3 дня до оплаты</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked id="payment-notifications">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium text-gray-800">Ежемесячный отчет</div>
+                                        <div class="text-sm text-gray-600">Отправка сводки в начале месяца</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" id="monthly-report">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Финансовое состояние -->
+                        <div class="border-b border-gray-200 pb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Финансовое состояние</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Текущий баланс на карте</label>
+                                    <div class="relative">
+                                        <input type="number" id="current-balance-input" class="w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="0">
+                                        <span class="absolute left-3 top-2.5 text-gray-500">₽</span>
+                                    </div>
+                                    <button id="update-balance" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200">
+                                        Обновить баланс
+                                    </button>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Дата последней зарплаты</label>
+                                    <input type="date" id="last-salary-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Периодичность зарплаты (дней)</label>
+                                    <input type="number" id="salary-period" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="14">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Валюта и формат -->
+                        <div class="border-b border-gray-200 pb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Формат отображения</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Валюта</label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" id="currency-select">
+                                        <option value="RUB">Российский рубль (₽)</option>
+                                        <option value="USD">Доллар США ($)</option>
+                                        <option value="EUR">Евро (€)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Формат даты</label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" id="date-format">
+                                        <option value="DD.MM.YYYY">ДД.ММ.ГГГГ</option>
+                                        <option value="MM/DD/YYYY">ММ/ДД/ГГГГ</option>
+                                        <option value="YYYY-MM-DD">ГГГГ-ММ-ДД</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Резервное копирование -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Данные и безопасность</h3>
+                            <div class="space-y-4">
+                                <button id="export-btn" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center">
+                                    <div class="p-2 bg-blue-100 text-blue-600 rounded-lg mr-3">
+                                        <i class="fas fa-download"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-800">Экспорт данных</div>
+                                        <div class="text-sm text-gray-600">Сохранить данные в файл</div>
+                                    </div>
+                                </button>
+                                <button id="import-btn" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center">
+                                    <div class="p-2 bg-green-100 text-green-600 rounded-lg mr-3">
+                                        <i class="fas fa-upload"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-800">Импорт данных</div>
+                                        <div class="text-sm text-gray-600">Загрузить данные из файла</div>
+                                    </div>
+                                </button>
+                                <button id="clear-data" class="w-full text-left p-4 border border-red-200 rounded-lg hover:bg-red-50 flex items-center">
+                                    <div class="p-2 bg-red-100 text-red-600 rounded-lg mr-3">
+                                        <i class="fas fa-trash"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-red-600">Очистить все данные</div>
+                                        <div class="text-sm text-red-500">Удалить все записи</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Модальное окно для добавления/редактирования цели -->
+        <div id="goal-modal" class="fixed inset-0 modal-overlay flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md slide-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800" id="goal-modal-title">Добавить финансовую цель</h3>
+                    <button id="close-goal-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="goal-form" class="space-y-4">
+                    <input type="hidden" id="goal-id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Название цели</label>
+                        <input type="text" id="goal-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Например: Отпуск в Турции">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Необходимая сумма</label>
+                        <div class="relative">
+                            <input type="number" id="goal-amount" required class="w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <span class="absolute left-3 top-2.5 text-gray-500">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Срок достижения</label>
+                        <input type="date" id="goal-deadline" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ежемесячный вклад</label>
+                        <div class="relative">
+                            <input type="number" id="goal-monthly" required class="w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <span class="absolute left-3 top-2.5 text-gray-500">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Категория</label>
+                        <select id="goal-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="vacation">Отпуск</option>
+                            <option value="car">Автомобиль</option>
+                            <option value="house">Недвижимость</option>
+                            <option value="education">Образование</option>
+                            <option value="emergency">Резервный фонд</option>
                             <option value="other">Другое</option>
                         </select>
-                        <select id="debt-frequency" class="form-input" required>
-                            <option value="">Выберите частоту</option>
-                            <option value="bi-weekly">Раз в 2 недели</option>
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" id="cancel-goal" class="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+                            Отмена
+                        </button>
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition duration-200">
+                            Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальное окно для добавления/редактирования дохода -->
+        <div id="income-modal" class="fixed inset-0 modal-overlay flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md slide-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800" id="income-modal-title">Добавить доход</h3>
+                    <button id="close-income-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="income-form" class="space-y-4">
+                    <input type="hidden" id="income-id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Название дохода</label>
+                        <input type="text" id="income-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Например: Зарплата">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Сумма дохода</label>
+                        <div class="relative">
+                            <input type="number" id="income-amount" required class="w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <span class="absolute left-3 top-2.5 text-gray-500">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Частота получения</label>
+                        <select id="income-frequency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="weekly">Еженедельно</option>
+                            <option value="biweekly" selected>Раз в две недели</option>
                             <option value="monthly">Ежемесячно</option>
                             <option value="quarterly">Ежеквартально</option>
-                            <option value="annually">Ежегодно</option>
-                            <option value="once">Однократно</option>
+                            <option value="yearly">Ежегодно</option>
                         </select>
-                        <input type="date" id="debt-due-date" class="form-input" required>
-                        <button type="submit" class="btn btn-primary w-full" id="save-debt-btn">Сохранить</button>
-                    </form>
-                </div>
-                <div class="card mt-4">
-                    <h2 class="text-xl font-bold mb-4">Мои долги</h2>
-                    <div id="debt-list" class="space-y-4">
-                        <p class="text-gray-500 text-center">Список долгов пуст.</p>
                     </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Дата следующего получения</label>
+                        <input type="date" id="income-next-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Категория</label>
+                        <select id="income-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="salary">Зарплата</option>
+                            <option value="freelance">Фриланс</option>
+                            <option value="investment">Инвестиции</option>
+                            <option value="business">Бизнес</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" id="cancel-income" class="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+                            Отмена
+                        </button>
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition duration-200">
+                            Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальное окно для добавления/редактирования расхода -->
+        <div id="expense-modal" class="fixed inset-0 modal-overlay flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md slide-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800" id="expense-modal-title">Добавить расход</h3>
+                    <button id="close-expense-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="expense-form" class="space-y-4">
+                    <input type="hidden" id="expense-id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Название расхода</label>
+                        <input type="text" id="expense-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Например: Аренда квартиры">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Сумма расхода</label>
+                        <div class="relative">
+                            <input type="number" id="expense-amount" required class="w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <span class="absolute left-3 top-2.5 text-gray-500">₽</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Тип расхода</label>
+                        <select id="expense-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="regular">Регулярный</option>
+                            <option value="one-time">Одноразовый</option>
+                            <option value="debt">Долг</option>
+                        </select>
+                    </div>
+                    
+                    <div id="regular-expense-fields">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Частота оплаты</label>
+                            <select id="expense-frequency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="weekly">Еженедельно</option>
+                                <option value="biweekly">Раз в две недели</option>
+                                <option value="monthly" selected>Ежемесячно</option>
+                                <option value="quarterly">Ежеквартально</option>
+                                <option value="yearly">Ежегодно</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Дата следующей оплаты</label>
+                            <input type="date" id="expense-next-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div id="debt-fields" class="hidden">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Процентная ставка</label>
+                            <div class="relative">
+                                <input type="number" id="debt-interest" step="0.01" class="w-full px-4 py-2 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="0.00">
+                                <span class="absolute left-3 top-2.5 text-gray-500">%</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Дата начала</label>
+                            <input type="date" id="debt-start-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Категория</label>
+                        <select id="expense-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="housing">Жилье</option>
+                            <option value="transport">Транспорт</option>
+                            <option value="food">Еда</option>
+                            <option value="utilities">Коммунальные услуги</option>
+                            <option value="entertainment">Развлечения</option>
+                            <option value="health">Здоровье</option>
+                            <option value="education">Образование</option>
+                            <option value="debt">Долги</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Приоритет</label>
+                        <select id="expense-priority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="high">Высокий</option>
+                            <option value="medium" selected>Средний</option>
+                            <option value="low">Низкий</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" id="cancel-expense" class="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+                            Отмена
+                        </button>
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-red-600 to-rose-600 text-white py-2 px-4 rounded-lg hover:from-red-700 hover:to-rose-700 transition duration-200">
+                            Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Уведомления -->
+        <div id="notification" class="notification bg-green-500 text-white">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span id="notification-text">Операция выполнена успешно</span>
+            </div>
+        </div>
+
+        <!-- Плавающая кнопка добавления -->
+        <div class="floating-btn pulse-animation" id="floating-add-btn">
+            <i class="fas fa-plus text-xl"></i>
+        </div>
+
+        <!-- Меню быстрого добавления -->
+        <div id="quick-add-menu" class="fixed bottom-24 right-6 bg-white rounded-xl shadow-lg p-2 hidden z-40">
+            <div class="space-y-2">
+                <button id="quick-add-income" class="flex items-center w-full p-3 hover:bg-green-50 rounded-lg">
+                    <div class="p-2 bg-green-100 text-green-600 rounded-lg mr-3">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <span class="text-gray-700">Доход</span>
+                </button>
+                <button id="quick-add-expense" class="flex items-center w-full p-3 hover:bg-red-50 rounded-lg">
+                    <div class="p-2 bg-red-100 text-red-600 rounded-lg mr-3">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <span class="text-gray-700">Расход</span>
+                </button>
+                <button id="quick-add-goal" class="flex items-center w-full p-3 hover:bg-purple-50 rounded-lg">
+                    <div class="p-2 bg-purple-100 text-purple-600 rounded-lg mr-3">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <span class="text-gray-700">Цель</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Модальное окно для просмотра деталей -->
+        <div id="details-modal" class="fixed inset-0 modal-overlay flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md slide-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800" id="details-title">Детали</h3>
+                    <button id="close-details-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div id="details-content" class="space-y-4">
+                    <!-- Детали будут заполнены динамически -->
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Модальное окно для подтверждения -->
-    <div id="confirm-modal" class="modal hidden">
-        <div class="modal-content">
-            <p class="text-lg font-bold mb-4">Вы уверены?</p>
-            <p id="confirm-message" class="mb-6 text-gray-700">Вы действительно хотите удалить эту запись?</p>
-            <div class="flex justify-end space-x-4">
-                <button id="confirm-cancel-btn" class="btn bg-gray-300 text-gray-800">Отмена</button>
-                <button id="confirm-ok-btn" class="btn btn-danger">Удалить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Общий контейнер для уведомлений -->
-    <div id="notification-container" class="notification-container">
-        <span id="notification-message"></span>
-    </div>
-    
-    <!-- Spinner for loading state -->
-    <div id="loading-spinner" class="fixed inset-0 bg-gray-200/50 flex items-center justify-center hidden">
-        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
     </div>
 
     <script>
-        // --- Global variables and DOM elements ---
-        const mainContent = document.getElementById('main-content');
-        const incomeContent = document.getElementById('income-content');
-        const debtsContent = document.getElementById('debts-content');
-        const mainTab = document.getElementById('main-tab');
-        const incomeTab = document.getElementById('income-tab');
-        const debtsTab = document.getElementById('debts-tab');
-        const incomeForm = document.getElementById('income-form');
-        const debtForm = document.getElementById('debt-form');
-        const incomeList = document.getElementById('income-list');
-        const debtList = document.getElementById('debt-list');
-        const confirmModal = document.getElementById('confirm-modal');
-        const confirmMessage = document.getElementById('confirm-message');
-        const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
-        const confirmOkBtn = document.getElementById('confirm-ok-btn');
-        const notificationContainer = document.getElementById('notification-container');
-        const notificationMessage = document.getElementById('notification-message');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        
-        // --- Data variables, stored in Local Storage for simplicity ---
-        let allIncome = [];
-        let allDebts = [];
-        let upcomingPaymentsData = [];
+        // Глобальное состояние приложения
+        const appState = {
+            incomes: JSON.parse(localStorage.getItem('incomes')) || [],
+            expenses: JSON.parse(localStorage.getItem('expenses')) || [],
+            goals: JSON.parse(localStorage.getItem('goals')) || [],
+            achievements: JSON.parse(localStorage.getItem('achievements')) || [],
+            financialState: JSON.parse(localStorage.getItem('financialState')) || {
+                currentBalance: 0,
+                lastSalaryDate: null,
+                salaryPeriod: 14
+            },
+            currentPage: 'dashboard',
+            searchQuery: '',
+            filter: 'all',
+            darkMode: localStorage.getItem('darkMode') === 'true',
+            settings: JSON.parse(localStorage.getItem('settings')) || {
+                notifications: true,
+                monthlyReport: false,
+                currency: 'RUB',
+                dateFormat: 'DD.MM.YYYY'
+            },
+            currentCalendarMonth: new Date().getMonth(),
+            currentCalendarYear: new Date().getFullYear()
+        };
 
-        // --- UI and tab management ---
-        function showTab(tabId) {
-            loadingSpinner.classList.add('hidden');
-            mainContent.classList.add('hidden');
-            incomeContent.classList.add('hidden');
-            debtsContent.classList.add('hidden');
+        // DOM элементы
+        const elements = {
+            dashboardPage: document.getElementById('dashboard-page'),
+            goalsPage: document.getElementById('goals-page'),
+            incomePage: document.getElementById('income-page'),
+            expensesPage: document.getElementById('expenses-page'),
+            analyticsPage: document.getElementById('analytics-page'),
+            calendarPage: document.getElementById('calendar-page'),
+            settingsPage: document.getElementById('settings-page'),
+            navButtons: document.querySelectorAll('.nav-btn'),
+            modals: {
+                goal: document.getElementById('goal-modal'),
+                income: document.getElementById('income-modal'),
+                expense: document.getElementById('expense-modal'),
+                details: document.getElementById('details-modal')
+            },
+            quickAddMenu: document.getElementById('quick-add-menu'),
+            floatingAddBtn: document.getElementById('floating-add-btn')
+        };
 
-            mainTab.classList.remove('active');
-            incomeTab.classList.remove('active');
-            debtsTab.classList.remove('active');
-
-            if (tabId === 'main-content') {
-                mainContent.classList.remove('hidden');
-                mainTab.classList.add('active');
-                renderMainDashboard();
-            } else if (tabId === 'income-content') {
-                incomeContent.classList.remove('hidden');
-                incomeTab.classList.add('active');
-            } else if (tabId === 'debts-content') {
-                debtsContent.classList.remove('hidden');
-                debtsTab.classList.add('active');
+        // Применение темной темы
+        function applyDarkMode() {
+            if (appState.darkMode) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('dark-mode-toggle').innerHTML = '<i class="fas fa-sun"></i>';
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.getElementById('dark-mode-toggle').innerHTML = '<i class="fas fa-moon"></i>';
             }
         }
 
-        mainTab.addEventListener('click', () => showTab('main-content'));
-        incomeTab.addEventListener('click', () => showTab('income-content'));
-        debtsTab.addEventListener('click', () => showTab('debts-content'));
-
-        // --- Confirmation modal ---
-        function showConfirmModal(message, onConfirm) {
-            confirmMessage.textContent = message;
-            confirmModal.classList.remove('hidden');
-            confirmOkBtn.onclick = () => {
-                onConfirm();
-                confirmModal.classList.add('hidden');
-            };
-            confirmCancelBtn.onclick = () => {
-                confirmModal.classList.add('hidden');
-            };
-        }
-
-        // --- Notifications ---
-        function showNotification(message, duration = 3000) {
-            notificationMessage.textContent = message;
-            notificationContainer.classList.add('show');
+        // Показ уведомления
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+            
+            notificationText.textContent = message;
+            notification.className = `notification ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+            
+            notification.classList.add('show');
+            
             setTimeout(() => {
-                notificationContainer.classList.remove('show');
-            }, duration);
+                notification.classList.remove('show');
+            }, 3000);
         }
 
-        // --- Calculation logic ---
-        function calculateRemainingBalance() {
-            const today = new Date();
-            const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-            const nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-
-            let totalIncome = 0;
-            let totalExpenses = 0;
-            upcomingPaymentsData = [];
-
-            // Calculate income for the next month
-            allIncome.forEach(item => {
-                let itemIncome = 0;
-                let payDate = new Date(item.payDate);
+        // Показ конфетти
+        function showConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            const container = document.getElementById('app');
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-10px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = Math.random() * 10 + 5 + 'px';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                container.appendChild(confetti);
                 
-                if (item.frequency === 'once' && payDate >= nextMonthStart && payDate <= nextMonthEnd) {
-                    itemIncome = item.amount;
-                } else if (item.frequency === 'monthly') {
-                    itemIncome = item.amount;
-                } else if (item.frequency === 'bi-weekly') {
-                    // A more precise calculation for bi-weekly payments
-                    let currentPaymentDate = new Date(item.payDate);
-                    while (currentPaymentDate < nextMonthEnd) {
-                        if (currentPaymentDate >= nextMonthStart) {
-                            itemIncome += item.amount;
-                        }
-                        currentPaymentDate.setDate(currentPaymentDate.getDate() + 14);
-                    }
-                }
-                if (itemIncome > 0) {
-                     upcomingPaymentsData.push({ title: item.title, amount: itemIncome, date: item.payDate, type: 'income' });
-                }
-                totalIncome += itemIncome;
-            });
-            
-            // Calculate debts for the next month
-            allDebts.forEach(item => {
-                let itemExpense = 0;
-                let dueDate = new Date(item.dueDate);
-
-                if (item.frequency === 'once' && dueDate >= nextMonthStart && dueDate <= nextMonthEnd) {
-                    itemExpense = item.amount;
-                } else if (item.frequency === 'monthly') {
-                    itemExpense = item.amount;
-                } else if (item.frequency === 'bi-weekly') {
-                    let currentDueDate = new Date(item.dueDate);
-                    while (currentDueDate < nextMonthEnd) {
-                         if (currentDueDate >= nextMonthStart) {
-                            itemExpense += item.amount;
-                        }
-                        currentDueDate.setDate(currentDueDate.getDate() + 14);
-                    }
-                } else if (item.frequency === 'quarterly') {
-                    if ((nextMonthStart.getMonth() - dueDate.getMonth()) % 3 === 0) {
-                        itemExpense = item.amount;
-                    }
-                } else if (item.frequency === 'annually') {
-                    if (nextMonthStart.getMonth() === dueDate.getMonth()) {
-                        itemExpense = item.amount;
-                    }
-                }
-                 if (itemExpense > 0) {
-                     upcomingPaymentsData.push({ title: item.title, amount: itemExpense, date: item.dueDate, type: 'debt' });
-                }
-                totalExpenses += itemExpense;
-            });
-            
-            document.getElementById('projected-income').textContent = `${totalIncome.toLocaleString('ru-RU')} ₽`;
-            document.getElementById('total-expenses').textContent = `${totalExpenses.toLocaleString('ru-RU')} ₽`;
-            
-            const remaining = totalIncome - totalExpenses;
-            document.getElementById('remaining-balance').textContent = `${remaining.toLocaleString('ru-RU')} ₽`;
-            
-            renderUpcomingPayments();
-        }
-        
-        function renderMainDashboard() {
-            calculateRemainingBalance();
+                // Анимация падения
+                const animation = confetti.animate([
+                    { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                    { transform: `translateY(${window.innerHeight}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+                ], {
+                    duration: Math.random() * 3000 + 2000,
+                    easing: 'cubic-bezier(0,0,0.2,1)'
+                });
+                
+                animation.onfinish = () => confetti.remove();
+            }
         }
 
-        function renderUpcomingPayments() {
-            const container = document.getElementById('upcoming-payments');
-            container.innerHTML = '';
-            if (upcomingPaymentsData.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center">Нет предстоящих платежей.</p>';
+        // Навигация
+        function navigateTo(page) {
+            // Скрыть все страницы
+            elements.dashboardPage.classList.add('hidden');
+            elements.goalsPage.classList.add('hidden');
+            elements.incomePage.classList.add('hidden');
+            elements.expensesPage.classList.add('hidden');
+            elements.analyticsPage.classList.add('hidden');
+            elements.calendarPage.classList.add('hidden');
+            elements.settingsPage.classList.add('hidden');
+            
+            // Убрать активный класс у всех кнопок
+            elements.navButtons.forEach(btn => btn.classList.remove('bg-indigo-100', 'text-indigo-700'));
+            
+            // Показать нужную страницу
+            switch(page) {
+                case 'dashboard':
+                    elements.dashboardPage.classList.remove('hidden');
+                    document.getElementById('nav-dashboard').classList.add('bg-indigo-100', 'text-indigo-700');
+                    renderDashboard();
+                    break;
+                case 'goals':
+                    elements.goalsPage.classList.remove('hidden');
+                    document.getElementById('nav-goals').classList.add('bg-indigo-100', 'text-indigo-700');
+                    renderGoals();
+                    break;
+                case 'income':
+                    elements.incomePage.classList.remove('hidden');
+                    document.getElementById('nav-income').classList.add('bg-indigo-100', 'text-indigo-700');
+                    renderIncomes();
+                    break;
+                case 'expenses':
+                    elements.expensesPage.classList.remove('hidden');
+                    document.getElementById('nav-expenses').classList.add('bg-indigo-100', 'text-indigo-700');
+                    renderExpenses();
+                    break;
+                case 'analytics':
+                    elements.analyticsPage.classList.remove('hidden');
+                    document.getElementById('nav-analytics').classList.add('bg-indigo-100', 'text-indigo-700');
+                    renderAnalytics();
+                    break;
+                case 'calendar':
+                    elements.calendarPage.classList.remove('hidden');
+                    document.getElementById('nav-calendar').classList.add('bg-indigo-100', 'text-indigo-700');
+                    renderCalendar();
+                    break;
+                case 'settings':
+                    elements.settingsPage.classList.remove('hidden');
+                    document.getElementById('nav-settings').classList.add('bg-indigo-100', 'text-indigo-700');
+                    loadSettings();
+                    break;
+            }
+            
+            appState.currentPage = page;
+            elements.quickAddMenu.classList.add('hidden');
+        }
+
+        // Сохранение данных в localStorage
+        function saveData() {
+            localStorage.setItem('incomes', JSON.stringify(appState.incomes));
+            localStorage.setItem('expenses', JSON.stringify(appState.expenses));
+            localStorage.setItem('goals', JSON.stringify(appState.goals));
+            localStorage.setItem('achievements', JSON.stringify(appState.achievements));
+            localStorage.setItem('financialState', JSON.stringify(appState.financialState));
+            localStorage.setItem('darkMode', appState.darkMode);
+            localStorage.setItem('settings', JSON.stringify(appState.settings));
+        }
+
+        // Загрузка настроек
+        function loadSettings() {
+            document.getElementById('payment-notifications').checked = appState.settings.notifications;
+            document.getElementById('monthly-report').checked = appState.settings.monthlyReport;
+            document.getElementById('currency-select').value = appState.settings.currency;
+            document.getElementById('date-format').value = appState.settings.dateFormat;
+            
+            // Загрузка финансового состояния
+            document.getElementById('current-balance-input').value = appState.financialState.currentBalance;
+            if (appState.financialState.lastSalaryDate) {
+                document.getElementById('last-salary-date').value = appState.financialState.lastSalaryDate;
+            }
+            document.getElementById('salary-period').value = appState.financialState.salaryPeriod;
+        }
+
+        // Сохранение настроек
+        function saveSettings() {
+            appState.settings.notifications = document.getElementById('payment-notifications').checked;
+            appState.settings.monthlyReport = document.getElementById('monthly-report').checked;
+            appState.settings.currency = document.getElementById('currency-select').value;
+            appState.settings.dateFormat = document.getElementById('date-format').value;
+            saveData();
+            showNotification('Настройки сохранены');
+        }
+
+        // Обновление финансового состояния
+        function updateFinancialState() {
+            appState.financialState.currentBalance = parseFloat(document.getElementById('current-balance-input').value) || 0;
+            appState.financialState.lastSalaryDate = document.getElementById('last-salary-date').value;
+            appState.financialState.salaryPeriod = parseInt(document.getElementById('salary-period').value) || 14;
+            saveData();
+            renderDashboard();
+            showNotification('Финансовое состояние обновлено');
+        }
+
+        // Рендеринг дашборда
+        function renderDashboard() {
+            // Рассчитываем баланс
+            const totalIncome = appState.incomes.reduce((sum, income) => {
+                // Конвертируем доход в месячный
+                let monthlyAmount = income.amount;
+                switch(income.frequency) {
+                    case 'weekly': monthlyAmount *= 4; break;
+                    case 'biweekly': monthlyAmount *= 2; break;
+                    case 'quarterly': monthlyAmount /= 3; break;
+                    case 'yearly': monthlyAmount /= 12; break;
+                }
+                return sum + monthlyAmount;
+            }, 0);
+            
+            const totalExpenses = appState.expenses.reduce((sum, expense) => {
+                // Конвертируем расход в месячный
+                let monthlyAmount = expense.amount;
+                if (expense.type === 'regular') {
+                    switch(expense.frequency) {
+                        case 'weekly': monthlyAmount *= 4; break;
+                        case 'biweekly': monthlyAmount *= 2; break;
+                        case 'quarterly': monthlyAmount /= 3; break;
+                        case 'yearly': monthlyAmount /= 12; break;
+                    }
+                }
+                return sum + monthlyAmount;
+            }, 0);
+            
+            const monthlySavings = totalIncome - totalExpenses;
+            
+            // Обновляем UI
+            document.getElementById('current-balance').textContent = `${Math.round(appState.financialState.currentBalance).toLocaleString()} ₽`;
+            document.getElementById('monthly-income').textContent = `${Math.round(totalIncome).toLocaleString()} ₽`;
+            document.getElementById('monthly-expenses').textContent = `${Math.round(totalExpenses).toLocaleString()} ₽`;
+            document.getElementById('monthly-savings').textContent = `${Math.round(monthlySavings).toLocaleString()} ₽`;
+            
+            // Рассчитываем дни до зарплаты
+            let daysToSalary = 0;
+            if (appState.financialState.lastSalaryDate) {
+                const lastSalaryDate = new Date(appState.financialState.lastSalaryDate);
+                const nextSalaryDate = new Date(lastSalaryDate);
+                nextSalaryDate.setDate(lastSalaryDate.getDate() + appState.financialState.salaryPeriod);
+                const today = new Date();
+                daysToSalary = Math.ceil((nextSalaryDate - today) / (1000 * 60 * 60 * 24));
+                daysToSalary = Math.max(0, daysToSalary); // Не отрицательные значения
+            }
+            document.getElementById('days-to-salary').textContent = daysToSalary;
+            
+            // Рассчитываем уровень финансовой стабильности
+            let stabilityPercent = 50;
+            if (totalIncome > 0) {
+                const ratio = (totalIncome - totalExpenses) / totalIncome;
+                stabilityPercent = Math.max(0, Math.min(100, 50 + ratio * 50));
+            }
+            
+            document.getElementById('stability-percent').textContent = `${Math.round(stabilityPercent)}%`;
+            document.getElementById('stability-bar').style.width = `${stabilityPercent}%`;
+            
+            // Сообщение о стабильности
+            let stabilityMessage = '';
+            if (stabilityPercent >= 80) {
+                stabilityMessage = 'Отличная финансовая стабильность! Продолжайте в том же духе.';
+            } else if (stabilityPercent >= 60) {
+                stabilityMessage = 'Хорошая финансовая стабильность. Можно немного сэкономить.';
+            } else if (stabilityPercent >= 40) {
+                stabilityMessage = 'Средняя финансовая стабильность. Рассмотрите оптимизацию расходов.';
             } else {
-                upcomingPaymentsData.sort((a, b) => new Date(a.date) - new Date(b.date));
-                upcomingPaymentsData.forEach(payment => {
-                    const isIncome = payment.type === 'income';
-                    const iconSvg = isIncome 
-                        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8m0 0V4m0 8l-4-4m4 4l4-4m-4 8l-4 4m4-4l4 4"/><circle cx="12" cy="12" r="10"/></svg>`
-                        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v8m0 0v8m0-8l-4 4m4-4l4 4m-4-8l-4-4m4 4l4-4"/><circle cx="12" cy="12" r="10"/></svg>`;
+                stabilityMessage = 'Низкая финансовая стабильность. Необходимо срочно оптимизировать расходы.';
+            }
+            document.getElementById('stability-message').textContent = stabilityMessage;
+            
+            // Рассчитываем бюджет
+            const budgetPercent = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
+            document.getElementById('budget-status').textContent = `${budgetPercent}%`;
+            
+            // Рассчитываем тренд
+            const trendPercent = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : 0;
+            document.getElementById('trend-indicator').textContent = `${trendPercent}%`;
+            
+            // Рендерим ближайшие платежи
+            renderUpcomingPayments();
+            
+            // Рендерим график
+            renderIncomeExpenseChart();
+            
+            // Рендерим цели
+            renderGoalsList();
+            
+            // Рендерим достижения
+            renderAchievements();
+        }
 
-                    const paymentEl = document.createElement('div');
-                    paymentEl.className = `flex justify-between items-center bg-gray-50 p-4 rounded-xl shadow-sm border-l-4 ${isIncome ? 'border-green-500' : 'border-red-500'}`;
-                    paymentEl.innerHTML = `
-                        <div class="flex items-center space-x-3">
-                            ${iconSvg}
-                            <div>
-                                <p class="font-bold">${payment.title}</p>
-                                <p class="text-sm text-gray-500">${new Date(payment.date).toLocaleDateString('ru-RU')}</p>
+        // Рендеринг целей
+        function renderGoalsList() {
+            const container = document.getElementById('goals-list');
+            
+            if (appState.goals.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-bullseye text-2xl mb-2"></i>
+                        <p>У вас пока нет целей</p>
+                        <button id="add-first-goal" class="mt-2 text-indigo-600 hover:text-indigo-800 text-sm">
+                            Добавить первую цель
+                        </button>
+                    </div>
+                `;
+                document.getElementById('add-first-goal')?.addEventListener('click', () => {
+                    document.getElementById('goal-modal').classList.remove('hidden');
+                });
+                return;
+            }
+            
+            const html = appState.goals.slice(0, 3).map(goal => {
+                const progress = Math.min(100, (goal.current_amount || 0) / goal.target_amount * 100);
+                
+                return `
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-gray-800">${goal.name}</h4>
+                            <span class="text-sm text-gray-600">${Math.round(progress)}%</span>
+                        </div>
+                        <div class="goal-progress mb-2">
+                            <div class="goal-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span>${Math.round(goal.current_amount || 0).toLocaleString()} ₽</span>
+                            <span>${Math.round(goal.target_amount).toLocaleString()} ₽</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            ${new Date(goal.deadline).toLocaleDateString('ru-RU')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Рендеринг достижений
+        function renderAchievements() {
+            const container = document.getElementById('achievements-list');
+            
+            if (appState.achievements.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-trophy text-2xl mb-2"></i>
+                        <p>Пока нет достижений</p>
+                        <p class="text-sm mt-1">Достигайте целей для получения наград</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = appState.achievements.slice(0, 3).map(achievement => {
+                return `
+                    <div class="flex items-center p-3 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg">
+                        <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg mr-3">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-yellow-800">${achievement.name}</div>
+                            <div class="text-xs text-yellow-700">${new Date(achievement.date).toLocaleDateString('ru-RU')}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Рендеринг графика доходов и расходов
+        function renderIncomeExpenseChart() {
+            const container = document.getElementById('income-expense-chart');
+            
+            // Получаем данные за последние 6 месяцев
+            const monthsData = getMonthsData(6);
+            
+            const maxValue = Math.max(...monthsData.map(d => Math.max(d.income, d.expense)));
+            
+            if (maxValue === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 w-full py-16">
+                        <i class="fas fa-chart-bar text-3xl mb-3"></i>
+                        <p>Недостаточно данных для отображения графика</p>
+                        <p class="text-sm mt-2">Добавьте доходы и расходы</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = monthsData.map((monthData, index) => {
+                const incomeHeight = (monthData.income / maxValue) * 100;
+                const expenseHeight = (monthData.expense / maxValue) * 100;
+                
+                return `
+                    <div class="flex flex-col items-center w-full">
+                        <div class="flex items-end justify-center h-32 w-full gap-1">
+                            <div class="chart-bar-item income" style="height: ${incomeHeight}%">
+                                <div class="tooltip">${Math.round(monthData.income).toLocaleString()} ₽</div>
+                            </div>
+                            <div class="chart-bar-item expense" style="height: ${expenseHeight}%">
+                                <div class="tooltip">${Math.round(monthData.expense).toLocaleString()} ₽</div>
                             </div>
                         </div>
-                        <p class="font-semibold ${isIncome ? 'text-green-600' : 'text-red-600'}">${isIncome ? '+' : '-'}${payment.amount.toLocaleString('ru-RU')} ₽</p>
-                    `;
-                    container.appendChild(paymentEl);
+                        <div class="text-xs text-gray-600 mt-2">${monthData.month}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Получение данных по месяцам
+        function getMonthsData(monthsCount) {
+            const data = [];
+            const now = new Date();
+            
+            for (let i = monthsCount - 1; i >= 0; i--) {
+                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+                // Считаем доходы за месяц
+                let monthIncome = 0;
+                appState.incomes.forEach(income => {
+                    if (income.next_date && income.next_date.startsWith(monthKey)) {
+                        monthIncome += income.amount;
+                    }
+                });
+                
+                // Считаем расходы за месяц
+                let monthExpense = 0;
+                appState.expenses.forEach(expense => {
+                    if (expense.type === 'regular' && expense.next_date && expense.next_date.startsWith(monthKey)) {
+                        monthExpense += expense.amount;
+                    } else if (expense.type === 'one-time' && expense.date && expense.date.startsWith(monthKey)) {
+                        monthExpense += expense.amount;
+                    } else if (expense.type === 'debt' && expense.start_date && expense.start_date.startsWith(monthKey)) {
+                        monthExpense += expense.amount;
+                    }
+                });
+                
+                const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+                data.push({
+                    month: months[date.getMonth()],
+                    income: monthIncome,
+                    expense: monthExpense
                 });
             }
+            
+            return data;
         }
 
-        // --- Data storage functions (using Local Storage) ---
-        function saveDataToLocalStorage() {
-            try {
-                localStorage.setItem('allIncome', JSON.stringify(allIncome));
-                localStorage.setItem('allDebts', JSON.stringify(allDebts));
-            } catch (e) {
-                console.error("Failed to save data to Local Storage", e);
+        // Рендеринг ближайших платежей
+        function renderUpcomingPayments() {
+            const container = document.getElementById('upcoming-payments');
+            const today = new Date();
+            
+            // Собираем все платежи
+            const payments = [];
+            
+            // Добавляем регулярные расходы
+            appState.expenses.forEach(expense => {
+                if (expense.type === 'regular' && expense.next_date) {
+                    const nextDate = new Date(expense.next_date);
+                    const daysUntil = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+                    
+                    payments.push({
+                        name: expense.name,
+                        amount: expense.amount,
+                        date: nextDate,
+                        type: 'expense',
+                        daysUntil: daysUntil,
+                        priority: expense.priority || 'medium'
+                    });
+                }
+            });
+            
+            // Добавляем долги
+            appState.expenses.forEach(expense => {
+                if (expense.type === 'debt') {
+                    payments.push({
+                        name: expense.name,
+                        amount: expense.amount,
+                        date: new Date(), // Для упрощения показываем все долги
+                        type: 'debt',
+                        daysUntil: 0,
+                        priority: 'high'
+                    });
+                }
+            });
+            
+            // Сортируем по срочности
+            payments.sort((a, b) => {
+                if (a.daysUntil !== b.daysUntil) {
+                    return a.daysUntil - b.daysUntil;
+                }
+                // Если дни равны, сортируем по приоритету
+                const priorityOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            });
+            
+            // Обновляем счетчик
+            document.getElementById('payments-count').textContent = `${payments.length} ${getPlural(payments.length, ['платеж', 'платежа', 'платежей'])}`;
+            
+            // Отображаем ближайшие 5 платежей
+            if (payments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-check text-gray-400"></i>
+                        <p class="text-gray-500">Нет запланированных платежей</p>
+                        <p class="text-sm text-gray-400 mt-2">Добавьте расходы для отслеживания</p>
+                    </div>
+                `;
+                return;
             }
-        }
-
-        function loadDataFromLocalStorage() {
-            try {
-                const incomeData = localStorage.getItem('allIncome');
-                const debtsData = localStorage.getItem('allDebts');
+            
+            const html = payments.slice(0, 5).map(payment => {
+                const dateStr = payment.date.toLocaleDateString('ru-RU');
+                const typeClass = payment.type === 'expense' ? 'text-red-600' : 'text-blue-600';
+                const iconClass = payment.type === 'expense' ? 'fa-arrow-up' : 'fa-file-invoice-dollar';
                 
-                if (incomeData) {
-                    allIncome = JSON.parse(incomeData);
+                // Определяем класс срочности
+                let urgencyClass = '';
+                if (payment.daysUntil <= 3) {
+                    urgencyClass = 'payment-urgency-3'; // Красный и мигающий
+                } else if (payment.daysUntil <= 10) {
+                    urgencyClass = 'payment-urgency-5'; // Желтый
+                } else {
+                    urgencyClass = 'payment-urgency-10'; // Зеленый
                 }
-                if (debtsData) {
-                    allDebts = JSON.parse(debtsData);
-                }
-            } catch (e) {
-                console.error("Failed to load data from Local Storage", e);
-                // If an error occurs, reset data
-                allIncome = [];
-                allDebts = [];
-            }
+                
+                const priorityText = payment.priority === 'high' ? 'text-red-600' : 
+                                   payment.priority === 'medium' ? 'text-gray-600' : 'text-gray-500';
+                
+                return `
+                    <div class="flex items-center p-3 rounded-lg border ${urgencyClass}">
+                        <div class="p-2 rounded-lg bg-white mr-3">
+                            <i class="fas ${iconClass} ${typeClass}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium">${payment.name}</div>
+                            <div class="text-sm ${priorityText}">${dateStr}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold ${typeClass}">${Math.round(payment.amount).toLocaleString()} ₽</div>
+                            ${payment.daysUntil > 0 ? `<div class="text-xs ${priorityText}">${payment.daysUntil} дн.</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
         }
 
-        // --- Data functions (income) ---
-        function saveIncome(data) {
-            if (data.id) {
-                // Update existing record
-                const index = allIncome.findIndex(item => item.id === data.id);
-                if (index !== -1) {
-                    allIncome[index] = data;
-                    showNotification('Доход обновлен!');
+        // Рендеринг целей (основная страница)
+        function renderGoals() {
+            const container = document.getElementById('goals-main-list');
+            
+            if (appState.goals.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-bullseye text-gray-400"></i>
+                        <p class="text-gray-500">У вас пока нет финансовых целей</p>
+                        <p class="text-sm text-gray-400 mt-2">Создайте первую цель для начала пути к финансовой свободе</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const categoryLabels = {
+                'vacation': 'Отпуск',
+                'car': 'Автомобиль',
+                'house': 'Недвижимость',
+                'education': 'Образование',
+                'emergency': 'Резервный фонд',
+                'other': 'Другое'
+            };
+            
+            const html = appState.goals.map(goal => {
+                const progress = Math.min(100, (goal.current_amount || 0) / goal.target_amount * 100);
+                const daysLeft = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+                const isCompleted = progress >= 100;
+                
+                return `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <h4 class="font-semibold text-gray-800 mr-2">${goal.name}</h4>
+                                    <span class="badge bg-purple-100 text-purple-800">
+                                        ${categoryLabels[goal.category] || 'Другое'}
+                                    </span>
+                                </div>
+                                <div class="text-2xl font-bold text-gray-800 mb-2">
+                                    ${Math.round(goal.current_amount || 0).toLocaleString()} ₽ 
+                                    <span class="text-lg text-gray-600">/ ${Math.round(goal.target_amount).toLocaleString()} ₽</span>
+                                </div>
+                                <div class="goal-progress mb-2">
+                                    <div class="goal-fill" style="width: ${progress}%"></div>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-600">
+                                    <span>${Math.round(progress)}% завершено</span>
+                                    <span>${daysLeft > 0 ? `${daysLeft} дн.` : 'Срок истек'}</span>
+                                </div>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    Ежемесячно: ${Math.round(goal.monthly_contribution).toLocaleString()} ₽
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                ${isCompleted ? `
+                                    <button onclick="completeGoal('${goal.id}')" class="p-2 text-green-500 hover:text-green-700 rounded-full hover:bg-green-50">
+                                        <i class="fas fa-trophy"></i>
+                                    </button>
+                                ` : ''}
+                                <button onclick="editGoal('${goal.id}')" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteGoal('${goal.id}')" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-50">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Рендеринг доходов
+        function renderIncomes() {
+            const container = document.getElementById('income-list');
+            
+            if (appState.incomes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-arrow-down text-gray-400"></i>
+                        <p class="text-gray-500">У вас пока нет источников дохода</p>
+                        <p class="text-sm text-gray-400 mt-2">Добавьте свои источники дохода</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const frequencyLabels = {
+                'weekly': 'Еженедельно',
+                'biweekly': 'Раз в две недели',
+                'monthly': 'Ежемесячно',
+                'quarterly': 'Ежеквартально',
+                'yearly': 'Ежегодно'
+            };
+            
+            const frequencyIcons = {
+                'weekly': 'fa-calendar-week',
+                'biweekly': 'fa-calendar-alt',
+                'monthly': 'fa-calendar',
+                'quarterly': 'fa-calendar-check',
+                'yearly': 'fa-calendar-day'
+            };
+            
+            const categoryLabels = {
+                'salary': 'Зарплата',
+                'freelance': 'Фриланс',
+                'investment': 'Инвестиции',
+                'business': 'Бизнес',
+                'other': 'Другое'
+            };
+            
+            const html = appState.incomes.map(income => {
+                // Конвертируем в месячный доход для отображения
+                let monthlyAmount = income.amount;
+                switch(income.frequency) {
+                    case 'weekly': monthlyAmount *= 4; break;
+                    case 'biweekly': monthlyAmount *= 2; break;
+                    case 'quarterly': monthlyAmount /= 3; break;
+                    case 'yearly': monthlyAmount /= 12; break;
+                }
+                
+                return `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <h4 class="font-semibold text-gray-800 mr-2">${income.name}</h4>
+                                    <span class="badge bg-green-100 text-green-800">
+                                        <i class="fas ${frequencyIcons[income.frequency]} mr-1"></i>
+                                        ${frequencyLabels[income.frequency]}
+                                    </span>
+                                </div>
+                                <div class="text-2xl font-bold text-green-600 mb-1">${Math.round(income.amount).toLocaleString()} ₽</div>
+                                <div class="text-sm text-gray-600">В месяц: ${Math.round(monthlyAmount).toLocaleString()} ₽</div>
+                                <div class="text-sm text-gray-500">${categoryLabels[income.category] || 'Без категории'}</div>
+                                ${income.next_date ? `<div class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    След. получение: ${new Date(income.next_date).toLocaleDateString('ru-RU')}
+                                </div>` : ''}
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="showIncomeDetails('${income.id}')" class="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-50">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <button onclick="editIncome('${income.id}')" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteIncome('${income.id}')" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-50">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Рендеринг расходов
+        function renderExpenses() {
+            const container = document.getElementById('expenses-list');
+            
+            if (appState.expenses.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-arrow-up text-gray-400"></i>
+                        <p class="text-gray-500">У вас пока нет расходов</p>
+                        <p class="text-sm text-gray-400 mt-2">Добавьте свои финансовые обязательства</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const typeLabels = {
+                'regular': 'Регулярный',
+                'one-time': 'Одноразовый',
+                'debt': 'Долг'
+            };
+            
+            const typeColors = {
+                'regular': 'bg-blue-100 text-blue-800',
+                'one-time': 'bg-purple-100 text-purple-800',
+                'debt': 'bg-red-100 text-red-800'
+            };
+            
+            const frequencyLabels = {
+                'weekly': 'Еженедельно',
+                'biweekly': 'Раз в две недели',
+                'monthly': 'Ежемесячно',
+                'quarterly': 'Ежеквартально',
+                'yearly': 'Ежегодно'
+            };
+            
+            const categoryLabels = {
+                'housing': 'Жилье',
+                'transport': 'Транспорт',
+                'food': 'Еда',
+                'utilities': 'Коммунальные услуги',
+                'entertainment': 'Развлечения',
+                'health': 'Здоровье',
+                'education': 'Образование',
+                'debt': 'Долги',
+                'other': 'Другое'
+            };
+            
+            const priorityLabels = {
+                'high': 'Высокий',
+                'medium': 'Средний',
+                'low': 'Низкий'
+            };
+            
+            const priorityColors = {
+                'high': 'bg-red-100 text-red-800',
+                'medium': 'bg-yellow-100 text-yellow-800',
+                'low': 'bg-green-100 text-green-800'
+            };
+            
+            const html = appState.expenses.map(expense => {
+                const today = new Date();
+                
+                let amountDisplay = Math.round(expense.amount).toLocaleString();
+                let dateInfo = '';
+                let urgencyClass = 'border-gray-200';
+                let urgencyText = 'text-gray-600';
+                
+                if (expense.type === 'regular' && expense.next_date) {
+                    const nextDate = new Date(expense.next_date);
+                    const daysUntil = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+                    dateInfo = `<div class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-calendar mr-1"></i>
+                        След. оплата: ${nextDate.toLocaleDateString('ru-RU')}
+                        ${daysUntil > 0 ? `(${daysUntil} дн.)` : '(сегодня)'}
+                    </div>`;
+                    if (daysUntil <= 3) {
+                        urgencyClass = 'border-red-300 bg-red-50';
+                        urgencyText = 'text-red-600';
+                    }
+                } else if (expense.type === 'one-time' && expense.date) {
+                    const expenseDate = new Date(expense.date);
+                    dateInfo = `<div class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-calendar mr-1"></i>
+                        Дата: ${expenseDate.toLocaleDateString('ru-RU')}
+                    </div>`;
+                } else if (expense.type === 'debt' && expense.start_date) {
+                    const startDate = new Date(expense.start_date);
+                    dateInfo = `<div class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-calendar mr-1"></i>
+                        Начало: ${startDate.toLocaleDateString('ru-RU')}
+                    </div>`;
+                }
+                
+                let frequencyInfo = '';
+                if (expense.type === 'regular' && expense.frequency) {
+                    frequencyInfo = `<div class="text-sm text-gray-500">${frequencyLabels[expense.frequency]}</div>`;
+                }
+                
+                let interestInfo = '';
+                if (expense.type === 'debt' && expense.interest_rate) {
+                    interestInfo = `<div class="text-sm text-gray-500">Ставка: ${expense.interest_rate}%</div>`;
+                }
+                
+                return `
+                    <div class="border ${urgencyClass} rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <h4 class="font-semibold text-gray-800 mr-2">${expense.name}</h4>
+                                    <span class="badge ${typeColors[expense.type]} mr-2">
+                                        ${typeLabels[expense.type]}
+                                    </span>
+                                    <span class="badge ${priorityColors[expense.priority]}">
+                                        ${priorityLabels[expense.priority]}
+                                    </span>
+                                </div>
+                                <div class="text-2xl font-bold text-red-600 mb-1">${amountDisplay} ₽</div>
+                                <div class="text-sm text-gray-500">${categoryLabels[expense.category] || 'Без категории'}</div>
+                                ${frequencyInfo}
+                                ${interestInfo}
+                                ${dateInfo}
+                            </div>
+                            <div class="flex space-x-2">
+                                ${expense.type === 'regular' ? `
+                                    <button onclick="markAsPaid('${expense.id}')" class="p-2 text-gray-500 hover:text-green-600 rounded-full hover:bg-green-50" title="Отметить как оплаченное">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                ` : ''}
+                                <button onclick="showExpenseDetails('${expense.id}')" class="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-50">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <button onclick="editExpense('${expense.id}')" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteExpense('${expense.id}')" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-50">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Рендеринг аналитики
+        function renderAnalytics() {
+            renderAnalyticsMetrics();
+            renderExpenseDistribution();
+            renderTransactionsHistory();
+            renderTrends();
+        }
+
+        // Рендеринг метрик аналитики
+        function renderAnalyticsMetrics() {
+            // Рассчитываем общие метрики за последние 6 месяцев
+            const monthsData = getMonthsData(6);
+            
+            const totalIncome = monthsData.reduce((sum, month) => sum + month.income, 0);
+            const totalExpenses = monthsData.reduce((sum, month) => sum + month.expense, 0);
+            const netProfit = totalIncome - totalExpenses;
+            
+            document.getElementById('total-income').textContent = `${Math.round(totalIncome).toLocaleString()} ₽`;
+            document.getElementById('total-expenses').textContent = `${Math.round(totalExpenses).toLocaleString()} ₽`;
+            document.getElementById('net-profit').textContent = `${Math.round(netProfit).toLocaleString()} ₽`;
+        }
+
+        // Рендеринг распределения расходов
+        function renderExpenseDistribution() {
+            const chartContainer = document.getElementById('expense-distribution-chart');
+            const listContainer = document.getElementById('expense-categories-list');
+            
+            // Группируем расходы по категориям
+            const categoryTotals = {};
+            const categoryLabels = {
+                'housing': 'Жилье',
+                'transport': 'Транспорт',
+                'food': 'Еда',
+                'utilities': 'Коммунальные услуги',
+                'entertainment': 'Развлечения',
+                'health': 'Здоровье',
+                'education': 'Образование',
+                'debt': 'Долги',
+                'other': 'Другое'
+            };
+            
+            appState.expenses.forEach(expense => {
+                const category = expense.category || 'other';
+                if (!categoryTotals[category]) {
+                    categoryTotals[category] = 0;
+                }
+                categoryTotals[category] += expense.amount;
+            });
+            
+            const total = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+            
+            if (total === 0) {
+                chartContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-chart-pie text-2xl mb-2"></i>
+                        <p>Нет данных для диаграммы</p>
+                    </div>
+                `;
+                listContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-list text-2xl mb-2"></i>
+                        <p>Нет категорий расходов</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Создаем диаграмму
+            const categories = Object.keys(categoryTotals);
+            const colors = ['#4f46e5', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316', '#64748b'];
+            
+            let chartHtml = '<div class="pie-chart-container">';
+            let angle = 0;
+            
+            categories.forEach((category, index) => {
+                const percentage = (categoryTotals[category] / total) * 100;
+                const sliceAngle = (percentage / 100) * 360;
+                const color = colors[index % colors.length];
+                
+                // Создаем сегмент диаграммы
+                chartHtml += `
+                    <div class="pie-segment" style="
+                        transform: rotate(${angle}deg);
+                        background: conic-gradient(${color} 0deg, ${color} ${sliceAngle}deg, transparent ${sliceAngle}deg, transparent 360deg);
+                    "></div>
+                `;
+                angle += sliceAngle;
+            });
+            
+            chartHtml += `
+                <div class="pie-center">
+                    <div class="text-center">
+                        <div class="text-sm font-bold">${Math.round(total).toLocaleString()}</div>
+                        <div class="text-xs text-gray-500">₽</div>
+                    </div>
+                </div>
+            `;
+            chartHtml += '</div>';
+            
+            chartContainer.innerHTML = chartHtml;
+            
+            // Создаем список категорий
+            const listHtml = categories.map((category, index) => {
+                const amount = categoryTotals[category];
+                const percentage = (amount / total) * 100;
+                const color = colors[index % colors.length];
+                
+                return `
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${color}"></div>
+                            <span class="font-medium">${categoryLabels[category] || category}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-medium">${Math.round(amount).toLocaleString()} ₽</div>
+                            <div class="text-xs text-gray-500">${Math.round(percentage)}%</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            listContainer.innerHTML = listHtml;
+        }
+
+        // Рендеринг истории транзакций
+        function renderTransactionsHistory() {
+            const container = document.getElementById('transactions-history');
+            
+            // Собираем все транзакции
+            const transactions = [];
+            
+            // Доходы
+            appState.incomes.forEach(income => {
+                transactions.push({
+                    type: 'income',
+                    name: income.name,
+                    amount: income.amount,
+                    date: income.next_date ? new Date(income.next_date) : new Date(),
+                    category: income.category
+                });
+            });
+            
+            // Расходы
+            appState.expenses.forEach(expense => {
+                let date = new Date();
+                if (expense.type === 'regular' && expense.next_date) {
+                    date = new Date(expense.next_date);
+                } else if (expense.type === 'one-time' && expense.date) {
+                    date = new Date(expense.date);
+                } else if (expense.type === 'debt' && expense.start_date) {
+                    date = new Date(expense.start_date);
+                }
+                
+                transactions.push({
+                    type: 'expense',
+                    name: expense.name,
+                    amount: expense.amount,
+                    date: date,
+                    category: expense.category
+                });
+            });
+            
+            // Сортируем по дате
+            transactions.sort((a, b) => b.date - a.date);
+            
+            if (transactions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-history text-2xl mb-2"></i>
+                        <p>Нет транзакций для отображения</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = transactions.slice(0, 10).map(transaction => {
+                const dateStr = transaction.date.toLocaleDateString('ru-RU');
+                const typeClass = transaction.type === 'income' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+                const iconClass = transaction.type === 'income' ? 'fa-arrow-down' : 'fa-arrow-up';
+                const amountClass = transaction.type === 'income' ? 'text-green-600' : 'text-red-600';
+                
+                return `
+                    <div class="flex items-center justify-between p-3 border-b border-gray-100">
+                        <div class="flex items-center">
+                            <div class="p-2 rounded-lg ${typeClass} mr-3">
+                                <i class="fas ${iconClass}"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-800">${transaction.name}</div>
+                                <div class="text-sm text-gray-500">${dateStr}</div>
+                            </div>
+                        </div>
+                        <div class="font-semibold ${amountClass}">
+                            ${transaction.type === 'income' ? '+' : '-'}${Math.round(transaction.amount).toLocaleString()} ₽
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Рендеринг трендов
+        function renderTrends() {
+            // Рассчитываем тренды за последние 3 месяца
+            const monthsData = getMonthsData(3);
+            
+            if (monthsData.length < 2) {
+                document.getElementById('income-trend').textContent = '+0%';
+                document.getElementById('expense-trend').textContent = '-0%';
+                return;
+            }
+            
+            // Рассчитываем тренд доходов
+            const firstIncome = monthsData[0].income;
+            const lastIncome = monthsData[monthsData.length - 1].income;
+            const incomeTrend = firstIncome > 0 ? ((lastIncome - firstIncome) / firstIncome) * 100 : 0;
+            
+            // Рассчитываем тренд расходов
+            const firstExpense = monthsData[0].expense;
+            const lastExpense = monthsData[monthsData.length - 1].expense;
+            const expenseTrend = firstExpense > 0 ? ((firstExpense - lastExpense) / firstExpense) * 100 : 0;
+            
+            document.getElementById('income-trend').textContent = `${incomeTrend >= 0 ? '+' : ''}${Math.round(incomeTrend)}%`;
+            document.getElementById('expense-trend').textContent = `${expenseTrend >= 0 ? '+' : ''}${Math.round(expenseTrend)}%`;
+            
+            // Обновляем прогресс-бары
+            const incomeBarWidth = Math.min(100, Math.abs(incomeTrend) * 2);
+            const expenseBarWidth = Math.min(100, Math.abs(expenseTrend) * 2);
+            
+            document.getElementById('income-trend-bar').style.width = `${incomeBarWidth}%`;
+            document.getElementById('expense-trend-bar').style.width = `${expenseBarWidth}%`;
+        }
+
+        // Рендеринг календаря
+        function renderCalendar() {
+            const container = document.getElementById('calendar-grid');
+            const monthElement = document.getElementById('current-month');
+            
+            const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            const year = appState.currentCalendarYear;
+            const month = appState.currentCalendarMonth;
+            
+            monthElement.textContent = `${months[month]} ${year}`;
+            
+            // Получаем первый день месяца и количество дней
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDay = firstDay.getDay() || 7; // Воскресенье = 0, понедельник = 1
+            
+            let html = '';
+            
+            // Пустые дни в начале месяца
+            for (let i = 1; i < startDay; i++) {
+                html += '<div class="h-24 border border-gray-100"></div>';
+            }
+            
+            // Дни месяца
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEvents = getEventsForDate(dateStr);
+                
+                let eventsHtml = '';
+                if (dayEvents.length > 0) {
+                    eventsHtml = dayEvents.slice(0, 2).map(event => {
+                        const colorClass = event.type === 'income' ? 'bg-green-100 text-green-800' : 
+                                         event.type === 'expense' ? 'bg-red-100 text-red-800' : 
+                                         'bg-blue-100 text-blue-800';
+                        return `<div class="text-xs truncate px-1 py-0.5 rounded ${colorClass}">${event.name}</div>`;
+                    }).join('');
+                }
+                
+                const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
+                const todayClass = isToday ? 'bg-indigo-100 border-indigo-300' : 'bg-white';
+                
+                html += `
+                    <div class="h-24 border border-gray-200 p-1 ${todayClass}">
+                        <div class="font-medium text-sm ${isToday ? 'text-indigo-700' : 'text-gray-700'}">${day}</div>
+                        <div class="text-xs space-y-0.5 mt-1">
+                            ${eventsHtml}
+                            ${dayEvents.length > 2 ? `<div class="text-gray-500">+${dayEvents.length - 2}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Получение событий для конкретной даты
+        function getEventsForDate(dateStr) {
+            const events = [];
+            
+            // Доходы
+            appState.incomes.forEach(income => {
+                if (income.next_date === dateStr) {
+                    events.push({
+                        name: income.name,
+                        type: 'income',
+                        amount: income.amount
+                    });
+                }
+            });
+            
+            // Расходы
+            appState.expenses.forEach(expense => {
+                if ((expense.type === 'regular' && expense.next_date === dateStr) ||
+                    (expense.type === 'one-time' && expense.date === dateStr)) {
+                    events.push({
+                        name: expense.name,
+                        type: 'expense',
+                        amount: expense.amount
+                    });
+                }
+            });
+            
+            return events;
+        }
+
+        // Функции работы с данными
+        function saveGoal(goalData) {
+            const goalId = document.getElementById('goal-id').value;
+            
+            if (goalId) {
+                // Редактирование существующей цели
+                const goalIndex = appState.goals.findIndex(g => g.id === goalId);
+                if (goalIndex !== -1) {
+                    appState.goals[goalIndex] = {
+                        ...appState.goals[goalIndex],
+                        ...goalData,
+                        target_amount: parseFloat(goalData.target_amount),
+                        current_amount: parseFloat(goalData.current_amount) || 0,
+                        monthly_contribution: parseFloat(goalData.monthly_contribution),
+                        deadline: goalData.deadline
+                    };
                 }
             } else {
-                // Add new record
-                const newId = Date.now().toString();
-                allIncome.push({ id: newId, ...data });
-                showNotification('Доход добавлен!');
+                // Добавление новой цели
+                const newGoal = {
+                    id: Date.now().toString(),
+                    ...goalData,
+                    target_amount: parseFloat(goalData.target_amount),
+                    current_amount: parseFloat(goalData.current_amount) || 0,
+                    monthly_contribution: parseFloat(goalData.monthly_contribution),
+                    deadline: goalData.deadline
+                };
+                appState.goals.push(newGoal);
             }
-            incomeForm.reset();
-            document.getElementById('income-id').value = '';
-            saveDataToLocalStorage();
-            renderIncomeList();
-            calculateRemainingBalance();
+            
+            saveData();
+            renderGoals();
+            renderDashboard();
+            elements.modals.goal.classList.add('hidden');
+            showNotification(goalId ? 'Цель успешно обновлена' : 'Цель успешно добавлена');
+        }
+
+        function saveIncome(incomeData) {
+            const incomeId = document.getElementById('income-id').value;
+            
+            if (incomeId) {
+                // Редактирование существующего дохода
+                const incomeIndex = appState.incomes.findIndex(i => i.id === incomeId);
+                if (incomeIndex !== -1) {
+                    appState.incomes[incomeIndex] = {
+                        ...appState.incomes[incomeIndex],
+                        ...incomeData,
+                        amount: parseFloat(incomeData.amount),
+                        next_date: incomeData.next_date || new Date().toISOString().split('T')[0]
+                    };
+                }
+            } else {
+                // Добавление нового дохода
+                const newIncome = {
+                    id: Date.now().toString(),
+                    ...incomeData,
+                    amount: parseFloat(incomeData.amount),
+                    next_date: incomeData.next_date || new Date().toISOString().split('T')[0]
+                };
+                appState.incomes.push(newIncome);
+            }
+            
+            saveData();
+            renderIncomes();
+            renderDashboard();
+            elements.modals.income.classList.add('hidden');
+            showNotification(incomeId ? 'Доход успешно обновлен' : 'Доход успешно добавлен');
+        }
+
+        function saveExpense(expenseData) {
+            const expenseId = document.getElementById('expense-id').value;
+            
+            if (expenseId) {
+                // Редактирование существующего расхода
+                const expenseIndex = appState.expenses.findIndex(e => e.id === expenseId);
+                if (expenseIndex !== -1) {
+                    appState.expenses[expenseIndex] = {
+                        ...appState.expenses[expenseIndex],
+                        ...expenseData,
+                        amount: parseFloat(expenseData.amount),
+                        priority: expenseData.priority || 'medium'
+                    };
+                }
+            } else {
+                // Добавление нового расхода
+                const newExpense = {
+                    id: Date.now().toString(),
+                    ...expenseData,
+                    amount: parseFloat(expenseData.amount),
+                    priority: expenseData.priority || 'medium'
+                };
+                appState.expenses.push(newExpense);
+            }
+            
+            saveData();
+            renderExpenses();
+            renderDashboard();
+            elements.modals.expense.classList.add('hidden');
+            showNotification(expenseId ? 'Расход успешно обновлен' : 'Расход успешно добавлен');
+        }
+
+        function deleteGoal(id) {
+            if (!confirm('Вы уверены, что хотите удалить эту цель?')) return;
+            
+            appState.goals = appState.goals.filter(goal => goal.id !== id);
+            saveData();
+            renderGoals();
+            renderDashboard();
+            showNotification('Цель удалена');
         }
 
         function deleteIncome(id) {
-            showConfirmModal('Вы уверены, что хотите удалить этот доход?', () => {
-                allIncome = allIncome.filter(item => item.id !== id);
-                showNotification('Доход удален!');
-                saveDataToLocalStorage();
-                renderIncomeList();
-                calculateRemainingBalance();
-            });
+            if (!confirm('Вы уверены, что хотите удалить этот доход?')) return;
+            
+            appState.incomes = appState.incomes.filter(income => income.id !== id);
+            saveData();
+            renderIncomes();
+            renderDashboard();
+            showNotification('Доход удален');
         }
 
-        // --- Data functions (debts) ---
-        function saveDebt(data) {
-            if (data.id) {
-                // Update existing record
-                const index = allDebts.findIndex(item => item.id === data.id);
-                if (index !== -1) {
-                    allDebts[index] = data;
-                    showNotification('Долг обновлен!');
-                }
+        function deleteExpense(id) {
+            if (!confirm('Вы уверены, что хотите удалить этот расход?')) return;
+            
+            appState.expenses = appState.expenses.filter(expense => expense.id !== id);
+            saveData();
+            renderExpenses();
+            renderDashboard();
+            showNotification('Расход удален');
+        }
+
+        function markAsPaid(id) {
+            // Находим расход
+            const expense = appState.expenses.find(e => e.id === id);
+            if (!expense) return;
+            
+            // Вычисляем следующую дату оплаты
+            const nextDate = new Date(expense.next_date);
+            switch(expense.frequency) {
+                case 'weekly':
+                    nextDate.setDate(nextDate.getDate() + 7);
+                    break;
+                case 'biweekly':
+                    nextDate.setDate(nextDate.getDate() + 14);
+                    break;
+                case 'monthly':
+                    nextDate.setMonth(nextDate.getMonth() + 1);
+                    break;
+                case 'quarterly':
+                    nextDate.setMonth(nextDate.getMonth() + 3);
+                    break;
+                case 'yearly':
+                    nextDate.setFullYear(nextDate.getFullYear() + 1);
+                    break;
+            }
+            
+            // Обновляем дату
+            expense.next_date = nextDate.toISOString().split('T')[0];
+            saveData();
+            renderExpenses();
+            renderDashboard();
+            showNotification('Платеж отмечен как оплаченный');
+        }
+
+        function completeGoal(id) {
+            const goal = appState.goals.find(g => g.id === id);
+            if (!goal) return;
+            
+            // Создаем достижение
+            const achievement = {
+                id: Date.now().toString(),
+                name: `Цель достигнута: ${goal.name}`,
+                date: new Date().toISOString().split('T')[0]
+            };
+            
+            appState.achievements.push(achievement);
+            
+            // Удаляем цель
+            appState.goals = appState.goals.filter(g => g.id !== id);
+            
+            saveData();
+            renderGoals();
+            renderDashboard();
+            showConfetti();
+            showNotification('Поздравляем! Цель достигнута!');
+        }
+
+        // Функции редактирования
+        function editGoal(id) {
+            const goal = appState.goals.find(g => g.id === id);
+            if (!goal) return;
+            
+            // Заполняем форму данными
+            document.getElementById('goal-id').value = goal.id;
+            document.getElementById('goal-name').value = goal.name;
+            document.getElementById('goal-amount').value = goal.target_amount;
+            document.getElementById('goal-deadline').value = goal.deadline;
+            document.getElementById('goal-monthly').value = goal.monthly_contribution;
+            document.getElementById('goal-category').value = goal.category;
+            
+            // Меняем заголовок модального окна
+            document.getElementById('goal-modal-title').textContent = 'Редактировать цель';
+            
+            // Открываем модальное окно
+            elements.modals.goal.classList.remove('hidden');
+        }
+
+        function editIncome(id) {
+            const income = appState.incomes.find(i => i.id === id);
+            if (!income) return;
+            
+            // Заполняем форму данными
+            document.getElementById('income-id').value = income.id;
+            document.getElementById('income-name').value = income.name;
+            document.getElementById('income-amount').value = income.amount;
+            document.getElementById('income-frequency').value = income.frequency;
+            document.getElementById('income-next-date').value = income.next_date || '';
+            document.getElementById('income-category').value = income.category;
+            
+            // Меняем заголовок модального окна
+            document.getElementById('income-modal-title').textContent = 'Редактировать доход';
+            
+            // Открываем модальное окно
+            elements.modals.income.classList.remove('hidden');
+        }
+
+        function editExpense(id) {
+            const expense = appState.expenses.find(e => e.id === id);
+            if (!expense) return;
+            
+            // Заполняем форму данными
+            document.getElementById('expense-id').value = expense.id;
+            document.getElementById('expense-name').value = expense.name;
+            document.getElementById('expense-amount').value = expense.amount;
+            document.getElementById('expense-type').value = expense.type;
+            document.getElementById('expense-category').value = expense.category;
+            document.getElementById('expense-priority').value = expense.priority;
+            
+            // Показываем/скрываем поля в зависимости от типа
+            if (expense.type === 'regular') {
+                document.getElementById('regular-expense-fields').classList.remove('hidden');
+                document.getElementById('debt-fields').classList.add('hidden');
+                document.getElementById('expense-frequency').value = expense.frequency || 'monthly';
+                document.getElementById('expense-next-date').value = expense.next_date || '';
+            } else if (expense.type === 'debt') {
+                document.getElementById('regular-expense-fields').classList.remove('hidden');
+                document.getElementById('debt-fields').classList.remove('hidden');
+                document.getElementById('debt-interest').value = expense.interest_rate || '';
+                document.getElementById('debt-start-date').value = expense.start_date || '';
             } else {
-                // Add new record
-                const newId = Date.now().toString();
-                allDebts.push({ id: newId, ...data });
-                showNotification('Долг добавлен!');
+                document.getElementById('regular-expense-fields').classList.add('hidden');
+                document.getElementById('debt-fields').classList.add('hidden');
             }
-            debtForm.reset();
-            document.getElementById('debt-id').value = '';
-            saveDataToLocalStorage();
-            renderDebtList();
-            calculateRemainingBalance();
+            
+            // Меняем заголовок модального окна
+            document.getElementById('expense-modal-title').textContent = 'Редактировать расход';
+            
+            // Открываем модальное окно
+            elements.modals.expense.classList.remove('hidden');
         }
 
-        function deleteDebt(id) {
-             showConfirmModal('Вы уверены, что хотите удалить этот долг?', () => {
-                allDebts = allDebts.filter(item => item.id !== id);
-                showNotification('Долг удален!');
-                saveDataToLocalStorage();
-                renderDebtList();
-                calculateRemainingBalance();
-            });
-        }
-
-        // --- List rendering ---
-        function renderIncomeList() {
-            incomeList.innerHTML = '';
-            if (allIncome.length === 0) {
-                incomeList.innerHTML = '<p class="text-gray-500 text-center">Список доходов пуст.</p>';
-                return;
-            }
-            allIncome.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'bg-white p-4 rounded-xl shadow-sm flex justify-between items-center';
-                itemEl.innerHTML = `
+        // Показ деталей
+        function showIncomeDetails(id) {
+            const income = appState.incomes.find(i => i.id === id);
+            if (!income) return;
+            
+            const frequencyLabels = {
+                'weekly': 'Еженедельно',
+                'biweekly': 'Раз в две недели',
+                'monthly': 'Ежемесячно',
+                'quarterly': 'Ежеквартально',
+                'yearly': 'Ежегодно'
+            };
+            
+            const categoryLabels = {
+                'salary': 'Зарплата',
+                'freelance': 'Фриланс',
+                'investment': 'Инвестиции',
+                'business': 'Бизнес',
+                'other': 'Другое'
+            };
+            
+            document.getElementById('details-title').textContent = income.name;
+            document.getElementById('details-content').innerHTML = `
+                <div class="space-y-3">
                     <div>
-                        <p class="font-bold">${item.title}</p>
-                        <p class="text-sm text-gray-500">${item.description || 'Без описания'}</p>
-                        <p class="font-semibold text-green-600 mt-1">${item.amount.toLocaleString('ru-RU')} ₽</p>
+                        <div class="text-sm text-gray-600">Категория</div>
+                        <div class="font-medium">${categoryLabels[income.category] || 'Без категории'}</div>
                     </div>
-                    <div class="flex space-x-2">
-                        <button class="text-blue-500 hover:text-blue-700 font-bold" onclick="editIncome('${item.id}')">Изменить</button>
-                        <button class="text-red-500 hover:text-red-700 font-bold" onclick="deleteIncome('${item.id}')">Удалить</button>
-                    </div>
-                `;
-                incomeList.appendChild(itemEl);
-            });
-        }
-
-        function renderDebtList() {
-            debtList.innerHTML = '';
-            if (allDebts.length === 0) {
-                debtList.innerHTML = '<p class="text-gray-500 text-center">Список долгов пуст.</p>';
-                return;
-            }
-            allDebts.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'bg-white p-4 rounded-xl shadow-sm flex justify-between items-center';
-                itemEl.innerHTML = `
                     <div>
-                        <p class="font-bold">${item.title}</p>
-                        <p class="text-sm text-gray-500">${item.description || 'Без описания'}</p>
-                        <p class="font-semibold text-red-600 mt-1">${item.amount.toLocaleString('ru-RU')} ₽</p>
+                        <div class="text-sm text-gray-600">Сумма</div>
+                        <div class="font-medium">${Math.round(income.amount).toLocaleString()} ₽</div>
                     </div>
-                    <div class="flex space-x-2">
-                        <button class="text-blue-500 hover:text-blue-700 font-bold" onclick="editDebt('${item.id}')">Изменить</button>
-                        <button class="text-red-500 hover:text-red-700 font-bold" onclick="deleteDebt('${item.id}')">Удалить</button>
+                    <div>
+                        <div class="text-sm text-gray-600">Частота получения</div>
+                        <div class="font-medium">${frequencyLabels[income.frequency]}</div>
                     </div>
-                `;
-                debtList.appendChild(itemEl);
-            });
+                    ${income.next_date ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Следующее получение</div>
+                        <div class="font-medium">${new Date(income.next_date).toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            elements.modals.details.classList.remove('hidden');
         }
 
-        // --- Populating forms for editing ---
-        window.editIncome = function(id) {
-            const item = allIncome.find(i => i.id === id);
-            if (item) {
-                document.getElementById('income-id').value = item.id;
-                document.getElementById('income-title').value = item.title;
-                document.getElementById('income-description').value = item.description || '';
-                document.getElementById('income-amount').value = item.amount;
-                document.getElementById('income-frequency').value = item.frequency;
-                document.getElementById('income-date').value = item.payDate;
-                showTab('income-content');
+        function showExpenseDetails(id) {
+            const expense = appState.expenses.find(e => e.id === id);
+            if (!expense) return;
+            
+            const typeLabels = {
+                'regular': 'Регулярный',
+                'one-time': 'Одноразовый',
+                'debt': 'Долг'
+            };
+            
+            const frequencyLabels = {
+                'weekly': 'Еженедельно',
+                'biweekly': 'Раз в две недели',
+                'monthly': 'Ежемесячно',
+                'quarterly': 'Ежеквартально',
+                'yearly': 'Ежегодно'
+            };
+            
+            const categoryLabels = {
+                'housing': 'Жилье',
+                'transport': 'Транспорт',
+                'food': 'Еда',
+                'utilities': 'Коммунальные услуги',
+                'entertainment': 'Развлечения',
+                'health': 'Здоровье',
+                'education': 'Образование',
+                'debt': 'Долги',
+                'other': 'Другое'
+            };
+            
+            const priorityLabels = {
+                'high': 'Высокий',
+                'medium': 'Средний',
+                'low': 'Низкий'
+            };
+            
+            document.getElementById('details-title').textContent = expense.name;
+            document.getElementById('details-content').innerHTML = `
+                <div class="space-y-3">
+                    <div>
+                        <div class="text-sm text-gray-600">Тип</div>
+                        <div class="font-medium">${typeLabels[expense.type]}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Категория</div>
+                        <div class="font-medium">${categoryLabels[expense.category] || 'Без категории'}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600">Сумма</div>
+                        <div class="font-medium">${Math.round(expense.amount).toLocaleString()} ₽</div>
+                    </div>
+                    ${expense.type === 'regular' && expense.frequency ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Частота оплаты</div>
+                        <div class="font-medium">${frequencyLabels[expense.frequency]}</div>
+                    </div>
+                    ` : ''}
+                    ${expense.type === 'debt' && expense.interest_rate ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Процентная ставка</div>
+                        <div class="font-medium">${expense.interest_rate}%</div>
+                    </div>
+                    ` : ''}
+                    ${expense.priority ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Приоритет</div>
+                        <div class="font-medium">${priorityLabels[expense.priority]}</div>
+                    </div>
+                    ` : ''}
+                    ${expense.next_date ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Следующая оплата</div>
+                        <div class="font-medium">${new Date(expense.next_date).toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    ` : ''}
+                    ${expense.date ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Дата</div>
+                        <div class="font-medium">${new Date(expense.date).toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    ` : ''}
+                    ${expense.start_date ? `
+                    <div>
+                        <div class="text-sm text-gray-600">Дата начала</div>
+                        <div class="font-medium">${new Date(expense.start_date).toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            elements.modals.details.classList.remove('hidden');
+        }
+
+        // Экспорт/импорт данных
+        function exportData() {
+            const data = {
+                incomes: appState.incomes,
+                expenses: appState.expenses,
+                goals: appState.goals,
+                achievements: appState.achievements,
+                financialState: appState.financialState,
+                settings: appState.settings
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `dolgotracker-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Данные экспортированы успешно');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        
+                        if (data.incomes) appState.incomes = data.incomes;
+                        if (data.expenses) appState.expenses = data.expenses;
+                        if (data.goals) appState.goals = data.goals;
+                        if (data.achievements) appState.achievements = data.achievements;
+                        if (data.financialState) appState.financialState = data.financialState;
+                        if (data.settings) appState.settings = data.settings;
+                        
+                        saveData();
+                        renderDashboard();
+                        renderGoals();
+                        renderIncomes();
+                        renderExpenses();
+                        
+                        showNotification('Данные импортированы успешно');
+                    } catch (error) {
+                        showNotification('Ошибка при импорте данных', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        // Очистка данных
+        function clearData() {
+            if (!confirm('Вы уверены, что хотите удалить все данные? Это действие нельзя отменить.')) return;
+            
+            appState.incomes = [];
+            appState.expenses = [];
+            appState.goals = [];
+            appState.achievements = [];
+            appState.financialState = {
+                currentBalance: 0,
+                lastSalaryDate: null,
+                salaryPeriod: 14
+            };
+            
+            saveData();
+            renderDashboard();
+            renderGoals();
+            renderIncomes();
+            renderExpenses();
+            
+            showNotification('Все данные удалены');
+        }
+
+        // Вспомогательные функции
+        function getPlural(number, titles) {
+            const cases = [2, 0, 1, 1, 1, 2];
+            return titles[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
+        }
+
+        // Обработчики событий
+        // Навигация по страницам
+        document.getElementById('nav-dashboard')?.addEventListener('click', () => navigateTo('dashboard'));
+        document.getElementById('nav-goals')?.addEventListener('click', () => navigateTo('goals'));
+        document.getElementById('nav-income')?.addEventListener('click', () => navigateTo('income'));
+        document.getElementById('nav-expenses')?.addEventListener('click', () => navigateTo('expenses'));
+        document.getElementById('nav-analytics')?.addEventListener('click', () => navigateTo('analytics'));
+        document.getElementById('nav-calendar')?.addEventListener('click', () => navigateTo('calendar'));
+        document.getElementById('nav-settings')?.addEventListener('click', () => navigateTo('settings'));
+
+        // Темная тема
+        document.getElementById('dark-mode-toggle')?.addEventListener('click', () => {
+            appState.darkMode = !appState.darkMode;
+            applyDarkMode();
+            saveData();
+        });
+
+        // Экспорт/импорт
+        document.getElementById('export-data')?.addEventListener('click', exportData);
+        document.getElementById('import-data')?.addEventListener('click', importData);
+        document.getElementById('export-btn')?.addEventListener('click', exportData);
+        document.getElementById('import-btn')?.addEventListener('click', importData);
+        document.getElementById('clear-data')?.addEventListener('click', clearData);
+
+        // Обновление финансового состояния
+        document.getElementById('update-balance')?.addEventListener('click', updateFinancialState);
+
+        // Модальные окна
+        document.getElementById('add-goal-btn')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('goal-form').reset();
+            document.getElementById('goal-id').value = '';
+            document.getElementById('goal-modal-title').textContent = 'Добавить финансовую цель';
+            elements.modals.goal.classList.remove('hidden');
+        });
+
+        document.getElementById('add-goal-main-btn')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('goal-form').reset();
+            document.getElementById('goal-id').value = '';
+            document.getElementById('goal-modal-title').textContent = 'Добавить финансовую цель';
+            elements.modals.goal.classList.remove('hidden');
+        });
+
+        document.getElementById('add-income-btn')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('income-form').reset();
+            document.getElementById('income-id').value = '';
+            document.getElementById('income-modal-title').textContent = 'Добавить доход';
+            // Устанавливаем дату по умолчанию
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            document.getElementById('income-next-date').value = today.toISOString().split('T')[0];
+            elements.modals.income.classList.remove('hidden');
+        });
+
+        document.getElementById('add-expense-btn')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('expense-form').reset();
+            document.getElementById('expense-id').value = '';
+            document.getElementById('expense-modal-title').textContent = 'Добавить расход';
+            // Устанавливаем значения по умолчанию
+            document.getElementById('expense-type').value = 'regular';
+            document.getElementById('regular-expense-fields').classList.remove('hidden');
+            document.getElementById('debt-fields').classList.add('hidden');
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            document.getElementById('expense-next-date').value = today.toISOString().split('T')[0];
+            elements.modals.expense.classList.remove('hidden');
+        });
+
+        // Закрытие модальных окон
+        document.getElementById('close-goal-modal')?.addEventListener('click', () => {
+            elements.modals.goal.classList.add('hidden');
+        });
+
+        document.getElementById('close-income-modal')?.addEventListener('click', () => {
+            elements.modals.income.classList.add('hidden');
+        });
+
+        document.getElementById('close-expense-modal')?.addEventListener('click', () => {
+            elements.modals.expense.classList.add('hidden');
+        });
+
+        document.getElementById('close-details-modal')?.addEventListener('click', () => {
+            elements.modals.details.classList.add('hidden');
+        });
+
+        document.getElementById('cancel-goal')?.addEventListener('click', () => {
+            elements.modals.goal.classList.add('hidden');
+        });
+
+        document.getElementById('cancel-income')?.addEventListener('click', () => {
+            elements.modals.income.classList.add('hidden');
+        });
+
+        document.getElementById('cancel-expense')?.addEventListener('click', () => {
+            elements.modals.expense.classList.add('hidden');
+        });
+
+        // Закрытие модальных окон по клику вне контента
+        window.addEventListener('click', (e) => {
+            if (e.target === elements.modals.goal) {
+                elements.modals.goal.classList.add('hidden');
             }
-        }
-
-        window.editDebt = function(id) {
-            const item = allDebts.find(d => d.id === id);
-            if (item) {
-                document.getElementById('debt-id').value = item.id;
-                document.getElementById('debt-title').value = item.title;
-                document.getElementById('debt-description').value = item.description || '';
-                document.getElementById('debt-amount').value = item.amount;
-                document.getElementById('debt-category').value = item.category;
-                document.getElementById('debt-frequency').value = item.frequency;
-                document.getElementById('debt-due-date').value = item.dueDate;
-                showTab('debts-content');
+            if (e.target === elements.modals.income) {
+                elements.modals.income.classList.add('hidden');
             }
-        }
+            if (e.target === elements.modals.expense) {
+                elements.modals.expense.classList.add('hidden');
+            }
+            if (e.target === elements.modals.details) {
+                elements.modals.details.classList.add('hidden');
+            }
+            if (e.target === document.getElementById('quick-add-menu')) {
+                elements.quickAddMenu.classList.add('hidden');
+            }
+        });
 
-        // --- Form event listeners ---
-        incomeForm.addEventListener('submit', (e) => {
+        // Формы
+        document.getElementById('goal-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const goalData = {
+                name: document.getElementById('goal-name').value,
+                target_amount: parseFloat(document.getElementById('goal-amount').value),
+                current_amount: 0,
+                monthly_contribution: parseFloat(document.getElementById('goal-monthly').value),
+                deadline: document.getElementById('goal-deadline').value,
+                category: document.getElementById('goal-category').value
+            };
+            saveGoal(goalData);
+        });
+
+        document.getElementById('income-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
             const incomeData = {
-                id: document.getElementById('income-id').value || null,
-                title: document.getElementById('income-title').value,
-                description: document.getElementById('income-description').value,
+                name: document.getElementById('income-name').value,
                 amount: parseFloat(document.getElementById('income-amount').value),
                 frequency: document.getElementById('income-frequency').value,
-                payDate: document.getElementById('income-date').value,
+                next_date: document.getElementById('income-next-date').value,
+                category: document.getElementById('income-category').value
             };
             saveIncome(incomeData);
         });
 
-        debtForm.addEventListener('submit', (e) => {
+        document.getElementById('expense-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
-            const debtData = {
-                id: document.getElementById('debt-id').value || null,
-                title: document.getElementById('debt-title').value,
-                description: document.getElementById('debt-description').value,
-                amount: parseFloat(document.getElementById('debt-amount').value),
-                category: document.getElementById('debt-category').value,
-                frequency: document.getElementById('debt-frequency').value,
-                dueDate: document.getElementById('debt-due-date').value,
+            const expenseType = document.getElementById('expense-type').value;
+            const expenseData = {
+                name: document.getElementById('expense-name').value,
+                amount: parseFloat(document.getElementById('expense-amount').value),
+                type: expenseType,
+                category: document.getElementById('expense-category').value,
+                priority: document.getElementById('expense-priority').value
             };
-            saveDebt(debtData);
+            
+            if (expenseType === 'regular') {
+                expenseData.frequency = document.getElementById('expense-frequency').value;
+                expenseData.next_date = document.getElementById('expense-next-date').value;
+            } else if (expenseType === 'debt') {
+                expenseData.interest_rate = parseFloat(document.getElementById('debt-interest').value) || 0;
+                expenseData.start_date = document.getElementById('debt-start-date').value;
+            } else if (expenseType === 'one-time') {
+                expenseData.date = new Date().toISOString().split('T')[0];
+            }
+            
+            saveExpense(expenseData);
         });
 
-        // --- Initialization on page load ---
-        window.addEventListener('load', () => {
-            loadDataFromLocalStorage();
-            renderIncomeList();
-            renderDebtList();
-            calculateRemainingBalance();
+        // Плавающая кнопка добавления
+        elements.floatingAddBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.quickAddMenu.classList.toggle('hidden');
         });
-        
+
+        // Быстрое добавление
+        document.getElementById('quick-add-income')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('income-form').reset();
+            document.getElementById('income-id').value = '';
+            document.getElementById('income-modal-title').textContent = 'Добавить доход';
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            document.getElementById('income-next-date').value = today.toISOString().split('T')[0];
+            elements.modals.income.classList.remove('hidden');
+            elements.quickAddMenu.classList.add('hidden');
+        });
+
+        document.getElementById('quick-add-expense')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('expense-form').reset();
+            document.getElementById('expense-id').value = '';
+            document.getElementById('expense-modal-title').textContent = 'Добавить расход';
+            // Устанавливаем значения по умолчанию
+            document.getElementById('expense-type').value = 'regular';
+            document.getElementById('regular-expense-fields').classList.remove('hidden');
+            document.getElementById('debt-fields').classList.add('hidden');
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            document.getElementById('expense-next-date').value = today.toISOString().split('T')[0];
+            elements.modals.expense.classList.remove('hidden');
+            elements.quickAddMenu.classList.add('hidden');
+        });
+
+        document.getElementById('quick-add-goal')?.addEventListener('click', () => {
+            // Очищаем форму
+            document.getElementById('goal-form').reset();
+            document.getElementById('goal-id').value = '';
+            document.getElementById('goal-modal-title').textContent = 'Добавить финансовую цель';
+            elements.modals.goal.classList.remove('hidden');
+            elements.quickAddMenu.classList.add('hidden');
+        });
+
+        // Настройки
+        document.getElementById('payment-notifications')?.addEventListener('change', saveSettings);
+        document.getElementById('monthly-report')?.addEventListener('change', saveSettings);
+        document.getElementById('currency-select')?.addEventListener('change', saveSettings);
+        document.getElementById('date-format')?.addEventListener('change', saveSettings);
+
+        // Календарь
+        document.getElementById('prev-month')?.addEventListener('click', () => {
+            appState.currentCalendarMonth--;
+            if (appState.currentCalendarMonth < 0) {
+                appState.currentCalendarMonth = 11;
+                appState.currentCalendarYear--;
+            }
+            renderCalendar();
+        });
+
+        document.getElementById('next-month')?.addEventListener('click', () => {
+            appState.currentCalendarMonth++;
+            if (appState.currentCalendarMonth > 11) {
+                appState.currentCalendarMonth = 0;
+                appState.currentCalendarYear++;
+            }
+            renderCalendar();
+        });
+
+        // Изменение типа расхода
+        document.getElementById('expense-type')?.addEventListener('change', (e) => {
+            const type = e.target.value;
+            if (type === 'regular') {
+                document.getElementById('regular-expense-fields').classList.remove('hidden');
+                document.getElementById('debt-fields').classList.add('hidden');
+            } else if (type === 'debt') {
+                document.getElementById('regular-expense-fields').classList.remove('hidden');
+                document.getElementById('debt-fields').classList.remove('hidden');
+            } else {
+                document.getElementById('regular-expense-fields').classList.add('hidden');
+                document.getElementById('debt-fields').classList.add('hidden');
+            }
+        });
+
+        // Периоды графика
+        document.querySelectorAll('[data-period]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const period = parseInt(e.target.dataset.period);
+                // Здесь можно добавить логику изменения периода графика
+                showNotification(`График обновлен за последние ${period} месяцев`);
+            });
+        });
+
+        // Инициализация приложения
+        function initApp() {
+            // Применяем темную тему
+            applyDarkMode();
+            
+            // Устанавливаем даты по умолчанию
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            document.getElementById('income-next-date').value = today.toISOString().split('T')[0];
+            
+            // Устанавливаем дедлайн для целей (через 12 месяцев)
+            const deadline = new Date();
+            deadline.setFullYear(deadline.getFullYear() + 1);
+            document.getElementById('goal-deadline').value = deadline.toISOString().split('T')[0];
+            
+            // Загружаем настройки
+            loadSettings();
+            
+            navigateTo('dashboard');
+        }
+
+        // Глобальные функции для onclick обработчиков
+        window.deleteGoal = deleteGoal;
+        window.deleteIncome = deleteIncome;
+        window.deleteExpense = deleteExpense;
+        window.markAsPaid = markAsPaid;
+        window.completeGoal = completeGoal;
+        window.editGoal = editGoal;
+        window.editIncome = editIncome;
+        window.editExpense = editExpense;
+        window.showIncomeDetails = showIncomeDetails;
+        window.showExpenseDetails = showExpenseDetails;
+
+        // Запуск приложения
+        initApp();
     </script>
 </body>
 </html>
