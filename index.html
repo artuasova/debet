@@ -6,57 +6,7 @@
     <title>Учет Долгов</title>
     <!-- Tailwind CSS для стилей -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключаем Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Глобальные переменные для доступа к Firebase
-        window.app = null;
-        window.db = null;
-        window.auth = null;
-        window.userId = null;
-        window.isAuthReady = false;
-
-        // Инициализация Firebase
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Убедимся, что конфигурация Firebase существует
-        if (Object.keys(firebaseConfig).length > 0) {
-            window.app = initializeApp(firebaseConfig);
-            window.auth = getAuth(window.app);
-            window.db = getFirestore(window.app);
-
-            // Обработка аутентификации пользователя
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    window.userId = user.uid;
-                } else {
-                    // Если токен не предоставлен, входим анонимно
-                    await signInAnonymously(window.auth);
-                }
-                window.isAuthReady = true;
-                console.log("Аутентификация завершена. userId:", window.userId);
-                setupFirestoreListeners();
-            });
-
-            // Запускаем аутентификацию
-            if (initialAuthToken) {
-                signInWithCustomToken(window.auth, initialAuthToken)
-                    .catch(error => {
-                        console.error("Ошибка при входе с токеном:", error);
-                        signInAnonymously(window.auth);
-                    });
-            } else {
-                signInAnonymously(window.auth);
-            }
-        } else {
-            console.error("Firebase config не найден. Проверьте правильность конфигурации.");
-        }
-    </script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         body {
@@ -168,13 +118,8 @@
         <!-- Заголовок приложения -->
         <h1 class="text-3xl font-bold text-center my-8 text-blue-800">Финансовый помощник</h1>
 
-        <!-- Индикатор загрузки -->
-        <div id="loading-indicator" class="flex justify-center items-center h-48">
-            <p class="text-gray-500 text-lg">Загрузка...</p>
-        </div>
-
         <!-- Контейнер для основного контента -->
-        <div id="content-container" class="hidden">
+        <div id="content-container">
             <!-- Блок с вкладками -->
             <div class="flex justify-center bg-gray-200 p-2 rounded-xl mb-4">
                 <button id="main-tab" class="tab-btn active">Главная</button>
@@ -288,19 +233,6 @@
     </div>
 
     <script>
-        // Код Service Worker для PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => {
-                        console.log('Service Worker зарегистрирован:', reg.scope);
-                    })
-                    .catch(err => {
-                        console.error('Ошибка при регистрации Service Worker:', err);
-                    });
-            });
-        }
-
         // --- Глобальные переменные и DOM-элементы ---
         const mainContent = document.getElementById('main-content');
         const incomeContent = document.getElementById('income-content');
@@ -318,10 +250,8 @@
         const confirmOkBtn = document.getElementById('confirm-ok-btn');
         const notificationContainer = document.getElementById('notification-container');
         const notificationMessage = document.getElementById('notification-message');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const contentContainer = document.getElementById('content-container');
         
-        // --- Переменные для данных ---
+        // --- Переменные для данных, теперь хранятся в памяти и Local Storage ---
         let allIncome = [];
         let allDebts = [];
         let upcomingPaymentsData = [];
@@ -375,37 +305,8 @@
             }, duration);
         }
 
-        // --- Логика PWA и Push-уведомлений ---
-        async function requestNotificationPermission() {
-            if ('Notification' in window) {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    console.log('Разрешение на уведомления получено.');
-                } else {
-                    console.warn('Разрешение на уведомления отклонено.');
-                }
-            }
-        }
-
-        function createPushReminder(debt) {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                const now = new Date();
-                const dueDate = new Date(debt.dueDate);
-                const timeDiff = dueDate.getTime() - now.getTime();
-                
-                if (timeDiff > 0) {
-                     setTimeout(() => {
-                        new Notification('Напоминание об оплате', {
-                            body: `${debt.title}: ${debt.amount.toLocaleString('ru-RU')} ₽. Срок: ${new Date(debt.dueDate).toLocaleDateString('ru-RU')}`,
-                            icon: 'https://placehold.co/128x128/2563EB/ffffff?text=PWA'
-                        });
-                    }, Math.max(0, timeDiff - 3600000));
-                }
-            }
-        }
-
         // --- Логика расчетов ---
-        function calculateRemainingBalance(income, debts) {
+        function calculateRemainingBalance() {
             const today = new Date();
             const twoWeeksFromNow = new Date();
             twoWeeksFromNow.setDate(today.getDate() + 14);
@@ -415,7 +316,7 @@
             upcomingPaymentsData = [];
 
             // Расчет доходов
-            income.forEach(item => {
+            allIncome.forEach(item => {
                 const payDate = new Date(item.payDate);
                 let currentItemIncome = 0;
                 if (payDate >= today && payDate <= twoWeeksFromNow) {
@@ -431,7 +332,7 @@
             });
             
             // Расчет обязательных расходов
-            debts.forEach(item => {
+            allDebts.forEach(item => {
                 const dueDate = new Date(item.dueDate);
                 if (dueDate >= today && dueDate <= twoWeeksFromNow) {
                     totalExpenses += item.amount;
@@ -447,6 +348,10 @@
             document.getElementById('remaining-balance').textContent = `${remaining.toLocaleString('ru-RU')} ₽`;
             
             renderUpcomingPayments();
+        }
+        
+        function renderMainDashboard() {
+            calculateRemainingBalance();
         }
 
         function renderUpcomingPayments() {
@@ -471,66 +376,82 @@
             }
         }
 
-        // --- Функции для работы с Firestore (доходы) ---
-        async function saveIncome(data) {
-            try {
-                const incomeCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/income`);
-                if (data.id) {
-                    const docRef = doc(incomeCollection, data.id);
-                    await updateDoc(docRef, data);
+        // --- Функции для работы с Local Storage ---
+        function saveDataToLocalStorage() {
+            localStorage.setItem('allIncome', JSON.stringify(allIncome));
+            localStorage.setItem('allDebts', JSON.stringify(allDebts));
+        }
+
+        function loadDataFromLocalStorage() {
+            const incomeData = localStorage.getItem('allIncome');
+            const debtsData = localStorage.getItem('allDebts');
+            
+            if (incomeData) {
+                allIncome = JSON.parse(incomeData);
+            }
+            if (debtsData) {
+                allDebts = JSON.parse(debtsData);
+            }
+        }
+
+        // --- Функции для работы с данными (доходы) ---
+        function saveIncome(data) {
+            if (data.id) {
+                // Обновление существующей записи
+                const index = allIncome.findIndex(item => item.id === data.id);
+                if (index !== -1) {
+                    allIncome[index] = data;
                     showNotification('Доход обновлен!');
-                } else {
-                    await addDoc(incomeCollection, { ...data, createdAt: serverTimestamp() });
-                    showNotification('Доход добавлен!');
                 }
-                incomeForm.reset();
-                document.getElementById('income-id').value = '';
-            } catch (error) {
-                console.error("Ошибка при сохранении дохода: ", error);
-                showNotification('Ошибка при сохранении дохода.');
+            } else {
+                // Добавление новой записи
+                const newId = Date.now().toString();
+                allIncome.push({ id: newId, ...data });
+                showNotification('Доход добавлен!');
             }
+            incomeForm.reset();
+            document.getElementById('income-id').value = '';
+            saveDataToLocalStorage();
+            renderIncomeList();
+            calculateRemainingBalance();
         }
 
-        async function deleteIncome(id) {
-            try {
-                const incomeCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/income`);
-                await deleteDoc(doc(incomeCollection, id));
-                showNotification('Доход удален!');
-            } catch (error) {
-                console.error("Ошибка при удалении дохода: ", error);
-                showNotification('Ошибка при удалении дохода.');
-            }
+        function deleteIncome(id) {
+            allIncome = allIncome.filter(item => item.id !== id);
+            showNotification('Доход удален!');
+            saveDataToLocalStorage();
+            renderIncomeList();
+            calculateRemainingBalance();
         }
 
-        // --- Функции для работы с Firestore (долги) ---
-        async function saveDebt(data) {
-            try {
-                const debtCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/debts`);
-                if (data.id) {
-                    const docRef = doc(debtCollection, data.id);
-                    await updateDoc(docRef, data);
+        // --- Функции для работы с данными (долги) ---
+        function saveDebt(data) {
+            if (data.id) {
+                // Обновление существующей записи
+                const index = allDebts.findIndex(item => item.id === data.id);
+                if (index !== -1) {
+                    allDebts[index] = data;
                     showNotification('Долг обновлен!');
-                } else {
-                    await addDoc(debtCollection, { ...data, createdAt: serverTimestamp() });
-                    showNotification('Долг добавлен!');
                 }
-                debtForm.reset();
-                document.getElementById('debt-id').value = '';
-            } catch (error) {
-                console.error("Ошибка при сохранении долга: ", error);
-                showNotification('Ошибка при сохранении долга.');
+            } else {
+                // Добавление новой записи
+                const newId = Date.now().toString();
+                allDebts.push({ id: newId, ...data });
+                showNotification('Долг добавлен!');
             }
+            debtForm.reset();
+            document.getElementById('debt-id').value = '';
+            saveDataToLocalStorage();
+            renderDebtList();
+            calculateRemainingBalance();
         }
 
-        async function deleteDebt(id) {
-            try {
-                const debtCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/debts`);
-                await deleteDoc(doc(debtCollection, id));
-                showNotification('Долг удален!');
-            } catch (error) {
-                console.error("Ошибка при удалении долга: ", error);
-                showNotification('Ошибка при удалении долга.');
-            }
+        function deleteDebt(id) {
+            allDebts = allDebts.filter(item => item.id !== id);
+            showNotification('Долг удален!');
+            saveDataToLocalStorage();
+            renderDebtList();
+            calculateRemainingBalance();
         }
 
         // --- Рендеринг списков ---
@@ -579,8 +500,6 @@
                     </div>
                 `;
                 debtList.appendChild(itemEl);
-                // Создаем напоминание для каждого долга
-                createPushReminder(item);
             });
         }
 
@@ -640,34 +559,12 @@
             saveDebt(debtData);
         });
 
-        // --- Слушатели Firestore для обновления данных в реальном времени ---
-        function setupFirestoreListeners() {
-            // Если все готово, скрываем индикатор загрузки и показываем контент
-            loadingIndicator.classList.add('hidden');
-            contentContainer.classList.remove('hidden');
-
-            // Слушатель для доходов
-            const incomeCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/income`);
-            onSnapshot(incomeCollection, (snapshot) => {
-                allIncome = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Доходы обновлены:", allIncome);
-                renderIncomeList();
-                calculateRemainingBalance(allIncome, allDebts);
-            });
-
-            // Слушатель для долгов
-            const debtCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/debts`);
-            onSnapshot(debtCollection, (snapshot) => {
-                allDebts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Долги обновлены:", allDebts);
-                renderDebtList();
-                calculateRemainingBalance(allIncome, allDebts);
-            });
-        }
-        
-        // --- Инициализация приложения ---
+        // --- Инициализация при загрузке страницы ---
         window.addEventListener('load', () => {
-            requestNotificationPermission();
+            loadDataFromLocalStorage();
+            renderIncomeList();
+            renderDebtList();
+            calculateRemainingBalance();
         });
         
     </script>
