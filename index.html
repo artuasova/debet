@@ -15,6 +15,7 @@
             color: #1e293b;
             margin: 0;
             padding: 0;
+            transition: background-color 0.3s ease;
         }
         .container {
             max-width: 600px;
@@ -23,43 +24,49 @@
         }
         .card {
             background-color: white;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 1.5rem; /* Более округлые углы */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Более мягкая тень */
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .form-input {
             width: 100%;
             padding: 0.75rem;
             border: 1px solid #e2e8f0;
-            border-radius: 0.5rem;
-            transition: border-color 0.2s;
+            border-radius: 0.75rem; /* Более округлые углы */
+            transition: border-color 0.2s ease;
         }
         .form-input:focus {
             outline: none;
             border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
         }
         .btn {
             padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: bold;
-            transition: background-color 0.2s, transform 0.1s;
+            border-radius: 0.75rem; /* Более округлые углы */
+            font-weight: 600; /* Более жирный шрифт */
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
         }
         .btn-primary {
             background-color: #2563eb;
             color: white;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
         }
         .btn-primary:hover {
             background-color: #1d4ed8;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(37, 99, 235, 0.4);
         }
         .btn-danger {
             background-color: #ef4444;
             color: white;
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
         }
         .btn-danger:hover {
             background-color: #dc2626;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(239, 68, 68, 0.4);
         }
         .notification-container {
             position: fixed;
@@ -90,25 +97,30 @@
             justify-content: center;
             align-items: center;
             z-index: 2000;
+            transition: opacity 0.3s ease;
         }
         .modal-content {
             background-color: white;
             padding: 2rem;
-            border-radius: 1rem;
+            border-radius: 1.5rem;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             width: 90%;
             max-width: 500px;
         }
         .tab-btn {
             padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: bold;
+            border-radius: 0.75rem;
+            font-weight: 600;
             color: #4b5563;
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
         }
         .tab-btn.active {
             background-color: white;
             color: #2563eb;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .tab-btn:hover:not(.active) {
+            background-color: #e5e7eb;
         }
     </style>
 </head>
@@ -130,9 +142,9 @@
             <!-- Главная вкладка -->
             <div id="main-content">
                 <!-- Карточка с балансом -->
-                <div class="card bg-blue-600 text-white flex flex-col items-center">
+                <div class="card bg-gradient-to-r from-blue-600 to-blue-500 text-white flex flex-col items-center transform scale-100 hover:scale-[1.01] transition-transform">
                     <h2 class="text-xl font-bold">Остаток на следующий месяц</h2>
-                    <p class="text-4xl font-extrabold mt-2" id="remaining-balance">0 ₽</p>
+                    <p class="text-5xl font-extrabold mt-2 tracking-wide" id="remaining-balance">0 ₽</p>
                     <div class="flex justify-between w-full mt-4 text-sm font-semibold">
                         <span>Прогноз доходов: <span id="projected-income">0 ₽</span></span>
                         <span>Прогноз расходов: <span id="total-expenses">0 ₽</span></span>
@@ -219,7 +231,7 @@
     <div id="confirm-modal" class="modal hidden">
         <div class="modal-content">
             <p class="text-lg font-bold mb-4">Вы уверены?</p>
-            <p id="confirm-message" class="mb-6">Вы действительно хотите удалить эту запись?</p>
+            <p id="confirm-message" class="mb-6 text-gray-700">Вы действительно хотите удалить эту запись?</p>
             <div class="flex justify-end space-x-4">
                 <button id="confirm-cancel-btn" class="btn bg-gray-300 text-gray-800">Отмена</button>
                 <button id="confirm-ok-btn" class="btn btn-danger">Удалить</button>
@@ -230,6 +242,14 @@
     <!-- Общий контейнер для уведомлений -->
     <div id="notification-container" class="notification-container">
         <span id="notification-message"></span>
+    </div>
+    
+    <!-- Spinner for loading state -->
+    <div id="loading-spinner" class="fixed inset-0 bg-gray-200/50 flex items-center justify-center hidden">
+        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
     </div>
 
     <script>
@@ -250,6 +270,7 @@
         const confirmOkBtn = document.getElementById('confirm-ok-btn');
         const notificationContainer = document.getElementById('notification-container');
         const notificationMessage = document.getElementById('notification-message');
+        const loadingSpinner = document.getElementById('loading-spinner');
         
         // --- Переменные для данных, хранятся в Local Storage ---
         let allIncome = [];
@@ -258,6 +279,7 @@
 
         // --- Управление UI и вкладками ---
         function showTab(tabId) {
+            loadingSpinner.classList.add('hidden');
             mainContent.classList.add('hidden');
             incomeContent.classList.add('hidden');
             debtsContent.classList.add('hidden');
@@ -318,39 +340,44 @@
             // Расчет доходов на следующий месяц
             allIncome.forEach(item => {
                 const payDate = new Date(item.payDate);
+                let itemIncome = 0;
                 if (item.frequency === 'once' && payDate.getMonth() === nextMonth.getMonth() && payDate.getFullYear() === nextMonth.getFullYear()) {
-                    totalIncome += item.amount;
+                    itemIncome = item.amount;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.payDate, type: 'income' });
                 } else if (item.frequency === 'monthly') {
-                    totalIncome += item.amount;
+                    itemIncome = item.amount;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.payDate, type: 'income' });
                 } else if (item.frequency === 'bi-weekly') {
-                     // Упрощенный расчет для 2х недель, можно сделать точнее
-                    totalIncome += item.amount * 2;
+                     // Упрощенный расчет для 2х недель
+                    itemIncome = item.amount * 2;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.payDate, type: 'income' });
                 }
+                totalIncome += itemIncome;
             });
             
             // Расчет обязательных расходов на следующий месяц
             allDebts.forEach(item => {
                 const dueDate = new Date(item.dueDate);
+                let itemExpense = 0;
                 if (item.frequency === 'once' && dueDate.getMonth() === nextMonth.getMonth() && dueDate.getFullYear() === nextMonth.getFullYear()) {
-                    totalExpenses += item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate, type: 'debt' });
+                    itemExpense = item.amount;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.dueDate, type: 'debt' });
                 } else if (item.frequency === 'monthly') {
-                    totalExpenses += item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate, type: 'debt' });
+                    itemExpense = item.amount;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.dueDate, type: 'debt' });
                 } else if (item.frequency === 'bi-weekly') {
-                    totalExpenses += item.amount * 2;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.dueDate, type: 'debt' });
+                    itemExpense = item.amount * 2;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.dueDate, type: 'debt' });
+                } else if (item.frequency === 'quarterly') {
+                    itemExpense = item.amount / 3;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount / 3, date: item.dueDate, type: 'debt' });
+                } else if (item.frequency === 'annually') {
+                    itemExpense = item.amount / 12;
+                    upcomingPaymentsData.push({ title: item.title, amount: item.amount / 12, date: item.dueDate, type: 'debt' });
                 }
+                totalExpenses += itemExpense;
             });
-
-            // Добавляем доходы в список предстоящих платежей для отображения
-            allIncome.forEach(item => {
-                const payDate = new Date(item.payDate);
-                if (item.frequency === 'monthly' || item.frequency === 'bi-weekly' || (item.frequency === 'once' && payDate.getMonth() === nextMonth.getMonth())) {
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, dueDate: item.payDate, type: 'income' });
-                }
-            });
-
+            
             document.getElementById('projected-income').textContent = `${totalIncome.toLocaleString('ru-RU')} ₽`;
             document.getElementById('total-expenses').textContent = `${totalExpenses.toLocaleString('ru-RU')} ₽`;
             
@@ -370,17 +397,24 @@
             if (upcomingPaymentsData.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center">Нет предстоящих платежей.</p>';
             } else {
-                upcomingPaymentsData.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                upcomingPaymentsData.sort((a, b) => new Date(a.date) - new Date(b.date));
                 upcomingPaymentsData.forEach(payment => {
                     const isIncome = payment.type === 'income';
+                    const iconSvg = isIncome 
+                        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8m0 0V4m0 8l-4-4m4 4l4-4m-4 8l-4 4m4-4l4 4"/><circle cx="12" cy="12" r="10"/></svg>`
+                        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v8m0 0v8m0-8l-4 4m4-4l4 4m-4-8l-4-4m4 4l4-4"/><circle cx="12" cy="12" r="10"/></svg>`;
+
                     const paymentEl = document.createElement('div');
-                    paymentEl.className = `flex justify-between items-center bg-gray-50 p-3 rounded-lg ${isIncome ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`;
+                    paymentEl.className = `flex justify-between items-center bg-gray-50 p-4 rounded-xl shadow-sm border-l-4 ${isIncome ? 'border-green-500' : 'border-red-500'}`;
                     paymentEl.innerHTML = `
-                        <div>
-                            <p class="font-bold">${payment.title}</p>
-                            <p class="text-sm text-gray-500">${new Date(payment.dueDate).toLocaleDateString('ru-RU')}</p>
+                        <div class="flex items-center space-x-3">
+                            ${iconSvg}
+                            <div>
+                                <p class="font-bold">${payment.title}</p>
+                                <p class="text-sm text-gray-500">${new Date(payment.date).toLocaleDateString('ru-RU')}</p>
+                            </div>
                         </div>
-                        <p class="font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}">${isIncome ? '+' : '-'}${payment.amount.toLocaleString('ru-RU')} ₽</p>
+                        <p class="font-semibold ${isIncome ? 'text-green-600' : 'text-red-600'}">${isIncome ? '+' : '-'}${payment.amount.toLocaleString('ru-RU')} ₽</p>
                     `;
                     container.appendChild(paymentEl);
                 });
@@ -389,8 +423,12 @@
 
         // --- Функции для работы с Local Storage ---
         function saveDataToLocalStorage() {
-            localStorage.setItem('allIncome', JSON.stringify(allIncome));
-            localStorage.setItem('allDebts', JSON.stringify(allDebts));
+            try {
+                localStorage.setItem('allIncome', JSON.stringify(allIncome));
+                localStorage.setItem('allDebts', JSON.stringify(allDebts));
+            } catch (e) {
+                console.error("Failed to save data to Local Storage", e);
+            }
         }
 
         function loadDataFromLocalStorage() {
@@ -435,11 +473,13 @@
         }
 
         function deleteIncome(id) {
-            allIncome = allIncome.filter(item => item.id !== id);
-            showNotification('Доход удален!');
-            saveDataToLocalStorage();
-            renderIncomeList();
-            calculateRemainingBalance();
+            showConfirmModal('Вы уверены, что хотите удалить этот доход?', () => {
+                allIncome = allIncome.filter(item => item.id !== id);
+                showNotification('Доход удален!');
+                saveDataToLocalStorage();
+                renderIncomeList();
+                calculateRemainingBalance();
+            });
         }
 
         // --- Функции для работы с данными (долги) ---
@@ -465,11 +505,13 @@
         }
 
         function deleteDebt(id) {
-            allDebts = allDebts.filter(item => item.id !== id);
-            showNotification('Долг удален!');
-            saveDataToLocalStorage();
-            renderDebtList();
-            calculateRemainingBalance();
+             showConfirmModal('Вы уверены, что хотите удалить этот долг?', () => {
+                allDebts = allDebts.filter(item => item.id !== id);
+                showNotification('Долг удален!');
+                saveDataToLocalStorage();
+                renderDebtList();
+                calculateRemainingBalance();
+            });
         }
 
         // --- Рендеринг списков ---
@@ -481,7 +523,7 @@
             }
             allIncome.forEach(item => {
                 const itemEl = document.createElement('div');
-                itemEl.className = 'bg-white p-4 rounded-lg shadow-sm flex justify-between items-center';
+                itemEl.className = 'bg-white p-4 rounded-xl shadow-sm flex justify-between items-center';
                 itemEl.innerHTML = `
                     <div>
                         <p class="font-bold">${item.title}</p>
@@ -490,7 +532,7 @@
                     </div>
                     <div class="flex space-x-2">
                         <button class="text-blue-500 hover:text-blue-700 font-bold" onclick="editIncome('${item.id}')">Изменить</button>
-                        <button class="text-red-500 hover:text-red-700 font-bold" onclick="showConfirmModal('Вы уверены, что хотите удалить доход "${item.title}"?', () => deleteIncome('${item.id}'))">Удалить</button>
+                        <button class="text-red-500 hover:text-red-700 font-bold" onclick="deleteIncome('${item.id}')">Удалить</button>
                     </div>
                 `;
                 incomeList.appendChild(itemEl);
@@ -505,7 +547,7 @@
             }
             allDebts.forEach(item => {
                 const itemEl = document.createElement('div');
-                itemEl.className = 'bg-white p-4 rounded-lg shadow-sm flex justify-between items-center';
+                itemEl.className = 'bg-white p-4 rounded-xl shadow-sm flex justify-between items-center';
                 itemEl.innerHTML = `
                     <div>
                         <p class="font-bold">${item.title}</p>
@@ -514,7 +556,7 @@
                     </div>
                     <div class="flex space-x-2">
                         <button class="text-blue-500 hover:text-blue-700 font-bold" onclick="editDebt('${item.id}')">Изменить</button>
-                        <button class="text-red-500 hover:text-red-700 font-bold" onclick="showConfirmModal('Вы уверены, что хотите удалить долг "${item.title}"?', () => deleteDebt('${item.id}'))">Удалить</button>
+                        <button class="text-red-500 hover:text-red-700 font-bold" onclick="deleteDebt('${item.id}')">Удалить</button>
                     </div>
                 `;
                 debtList.appendChild(itemEl);
