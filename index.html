@@ -253,7 +253,7 @@
     </div>
 
     <script>
-        // --- Глобальные переменные и DOM-элементы ---
+        // --- Global variables and DOM elements ---
         const mainContent = document.getElementById('main-content');
         const incomeContent = document.getElementById('income-content');
         const debtsContent = document.getElementById('debts-content');
@@ -272,12 +272,12 @@
         const notificationMessage = document.getElementById('notification-message');
         const loadingSpinner = document.getElementById('loading-spinner');
         
-        // --- Переменные для данных, хранятся в Local Storage ---
+        // --- Data variables, stored in Local Storage for simplicity ---
         let allIncome = [];
         let allDebts = [];
         let upcomingPaymentsData = [];
 
-        // --- Управление UI и вкладками ---
+        // --- UI and tab management ---
         function showTab(tabId) {
             loadingSpinner.classList.add('hidden');
             mainContent.classList.add('hidden');
@@ -305,7 +305,7 @@
         incomeTab.addEventListener('click', () => showTab('income-content'));
         debtsTab.addEventListener('click', () => showTab('debts-content'));
 
-        // --- Модальное окно подтверждения ---
+        // --- Confirmation modal ---
         function showConfirmModal(message, onConfirm) {
             confirmMessage.textContent = message;
             confirmModal.classList.remove('hidden');
@@ -318,7 +318,7 @@
             };
         }
 
-        // --- Уведомления ---
+        // --- Notifications ---
         function showNotification(message, duration = 3000) {
             notificationMessage.textContent = message;
             notificationContainer.classList.add('show');
@@ -327,53 +327,69 @@
             }, duration);
         }
 
-        // --- Логика расчетов ---
+        // --- Calculation logic ---
         function calculateRemainingBalance() {
             const today = new Date();
-            const nextMonth = new Date();
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+            const nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0);
 
             let totalIncome = 0;
             let totalExpenses = 0;
             upcomingPaymentsData = [];
 
-            // Расчет доходов на следующий месяц
+            // Calculate income for the next month
             allIncome.forEach(item => {
-                const payDate = new Date(item.payDate);
                 let itemIncome = 0;
-                if (item.frequency === 'once' && payDate.getMonth() === nextMonth.getMonth() && payDate.getFullYear() === nextMonth.getFullYear()) {
+                let payDate = new Date(item.payDate);
+                
+                if (item.frequency === 'once' && payDate >= nextMonthStart && payDate <= nextMonthEnd) {
                     itemIncome = item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.payDate, type: 'income' });
                 } else if (item.frequency === 'monthly') {
                     itemIncome = item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.payDate, type: 'income' });
                 } else if (item.frequency === 'bi-weekly') {
-                     // Упрощенный расчет для 2х недель
-                    itemIncome = item.amount * 2;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.payDate, type: 'income' });
+                    // A more precise calculation for bi-weekly payments
+                    let currentPaymentDate = new Date(item.payDate);
+                    while (currentPaymentDate < nextMonthEnd) {
+                        if (currentPaymentDate >= nextMonthStart) {
+                            itemIncome += item.amount;
+                        }
+                        currentPaymentDate.setDate(currentPaymentDate.getDate() + 14);
+                    }
+                }
+                if (itemIncome > 0) {
+                     upcomingPaymentsData.push({ title: item.title, amount: itemIncome, date: item.payDate, type: 'income' });
                 }
                 totalIncome += itemIncome;
             });
             
-            // Расчет обязательных расходов на следующий месяц
+            // Calculate debts for the next month
             allDebts.forEach(item => {
-                const dueDate = new Date(item.dueDate);
                 let itemExpense = 0;
-                if (item.frequency === 'once' && dueDate.getMonth() === nextMonth.getMonth() && dueDate.getFullYear() === nextMonth.getFullYear()) {
+                let dueDate = new Date(item.dueDate);
+
+                if (item.frequency === 'once' && dueDate >= nextMonthStart && dueDate <= nextMonthEnd) {
                     itemExpense = item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.dueDate, type: 'debt' });
                 } else if (item.frequency === 'monthly') {
                     itemExpense = item.amount;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.dueDate, type: 'debt' });
                 } else if (item.frequency === 'bi-weekly') {
-                    itemExpense = item.amount * 2;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount, date: item.dueDate, type: 'debt' });
+                    let currentDueDate = new Date(item.dueDate);
+                    while (currentDueDate < nextMonthEnd) {
+                         if (currentDueDate >= nextMonthStart) {
+                            itemExpense += item.amount;
+                        }
+                        currentDueDate.setDate(currentDueDate.getDate() + 14);
+                    }
                 } else if (item.frequency === 'quarterly') {
-                    itemExpense = item.amount / 3;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount / 3, date: item.dueDate, type: 'debt' });
+                    if ((nextMonthStart.getMonth() - dueDate.getMonth()) % 3 === 0) {
+                        itemExpense = item.amount;
+                    }
                 } else if (item.frequency === 'annually') {
-                    itemExpense = item.amount / 12;
-                    upcomingPaymentsData.push({ title: item.title, amount: item.amount / 12, date: item.dueDate, type: 'debt' });
+                    if (nextMonthStart.getMonth() === dueDate.getMonth()) {
+                        itemExpense = item.amount;
+                    }
+                }
+                 if (itemExpense > 0) {
+                     upcomingPaymentsData.push({ title: item.title, amount: itemExpense, date: item.dueDate, type: 'debt' });
                 }
                 totalExpenses += itemExpense;
             });
@@ -421,7 +437,7 @@
             }
         }
 
-        // --- Функции для работы с Local Storage ---
+        // --- Data storage functions (using Local Storage) ---
         function saveDataToLocalStorage() {
             try {
                 localStorage.setItem('allIncome', JSON.stringify(allIncome));
@@ -444,23 +460,23 @@
                 }
             } catch (e) {
                 console.error("Failed to load data from Local Storage", e);
-                // Если произошла ошибка, сбросить данные
+                // If an error occurs, reset data
                 allIncome = [];
                 allDebts = [];
             }
         }
 
-        // --- Функции для работы с данными (доходы) ---
+        // --- Data functions (income) ---
         function saveIncome(data) {
             if (data.id) {
-                // Обновление существующей записи
+                // Update existing record
                 const index = allIncome.findIndex(item => item.id === data.id);
                 if (index !== -1) {
                     allIncome[index] = data;
                     showNotification('Доход обновлен!');
                 }
             } else {
-                // Добавление новой записи
+                // Add new record
                 const newId = Date.now().toString();
                 allIncome.push({ id: newId, ...data });
                 showNotification('Доход добавлен!');
@@ -482,17 +498,17 @@
             });
         }
 
-        // --- Функции для работы с данными (долги) ---
+        // --- Data functions (debts) ---
         function saveDebt(data) {
             if (data.id) {
-                // Обновление существующей записи
+                // Update existing record
                 const index = allDebts.findIndex(item => item.id === data.id);
                 if (index !== -1) {
                     allDebts[index] = data;
                     showNotification('Долг обновлен!');
                 }
             } else {
-                // Добавление новой записи
+                // Add new record
                 const newId = Date.now().toString();
                 allDebts.push({ id: newId, ...data });
                 showNotification('Долг добавлен!');
@@ -514,7 +530,7 @@
             });
         }
 
-        // --- Рендеринг списков ---
+        // --- List rendering ---
         function renderIncomeList() {
             incomeList.innerHTML = '';
             if (allIncome.length === 0) {
@@ -563,7 +579,7 @@
             });
         }
 
-        // --- Заполнение форм для редактирования ---
+        // --- Populating forms for editing ---
         window.editIncome = function(id) {
             const item = allIncome.find(i => i.id === id);
             if (item) {
@@ -591,7 +607,7 @@
             }
         }
 
-        // --- Слушатели событий форм ---
+        // --- Form event listeners ---
         incomeForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const incomeData = {
@@ -619,7 +635,7 @@
             saveDebt(debtData);
         });
 
-        // --- Инициализация при загрузке страницы ---
+        // --- Initialization on page load ---
         window.addEventListener('load', () => {
             loadDataFromLocalStorage();
             renderIncomeList();
