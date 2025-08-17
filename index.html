@@ -40,6 +40,7 @@
                 }
                 window.isAuthReady = true;
                 console.log("Аутентификация завершена. userId:", window.userId);
+                setupFirestoreListeners();
             });
 
             // Запускаем аутентификацию
@@ -380,8 +381,6 @@
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
                     console.log('Разрешение на уведомления получено.');
-                    // Здесь можно подписать пользователя на push-уведомления
-                    // Это требует серверной части для отправки уведомлений
                 } else {
                     console.warn('Разрешение на уведомления отклонено.');
                 }
@@ -389,9 +388,6 @@
         }
 
         function createPushReminder(debt) {
-            // Для реальных push-уведомлений нужна серверная часть.
-            // Здесь мы создаем уведомление, которое просто появится сразу.
-            // В реальном приложении это будет триггером для отправки с сервера.
             if ('Notification' in window && Notification.permission === 'granted') {
                 const now = new Date();
                 const dueDate = new Date(debt.dueDate);
@@ -403,7 +399,7 @@
                             body: `${debt.title}: ${debt.amount.toLocaleString('ru-RU')} ₽. Срок: ${new Date(debt.dueDate).toLocaleDateString('ru-RU')}`,
                             icon: 'https://placehold.co/128x128/2563EB/ffffff?text=PWA'
                         });
-                    }, Math.max(0, timeDiff - 3600000)); // Напоминаем за 1 час до срока
+                    }, Math.max(0, timeDiff - 3600000));
                 }
             }
         }
@@ -422,12 +418,10 @@
             income.forEach(item => {
                 const payDate = new Date(item.payDate);
                 let currentItemIncome = 0;
-                // Проверяем, попадает ли доход в ближайшие 2 недели
                 if (payDate >= today && payDate <= twoWeeksFromNow) {
                     if (item.frequency === 'bi-weekly') {
                         currentItemIncome = item.amount;
                     } else if (item.frequency === 'monthly') {
-                        // Упрощенный расчет: если в двухнедельный период попадает месячный доход, учитываем его
                         currentItemIncome = item.amount;
                     } else if (item.frequency === 'once') {
                         currentItemIncome = item.amount;
@@ -479,10 +473,6 @@
 
         // --- Функции для работы с Firestore (доходы) ---
         async function saveIncome(data) {
-            if (!window.isAuthReady) {
-                showNotification('Приложение загружается, попробуйте еще раз.', 5000);
-                return;
-            }
             try {
                 const incomeCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/income`);
                 if (data.id) {
@@ -502,7 +492,6 @@
         }
 
         async function deleteIncome(id) {
-            if (!window.isAuthReady) return;
             try {
                 const incomeCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/income`);
                 await deleteDoc(doc(incomeCollection, id));
@@ -515,10 +504,6 @@
 
         // --- Функции для работы с Firestore (долги) ---
         async function saveDebt(data) {
-            if (!window.isAuthReady) {
-                showNotification('Приложение загружается, попробуйте еще раз.', 5000);
-                return;
-            }
             try {
                 const debtCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/debts`);
                 if (data.id) {
@@ -538,7 +523,6 @@
         }
 
         async function deleteDebt(id) {
-            if (!window.isAuthReady) return;
             try {
                 const debtCollection = collection(window.db, `artifacts/${appId}/users/${window.userId}/debts`);
                 await deleteDoc(doc(debtCollection, id));
@@ -658,13 +642,6 @@
 
         // --- Слушатели Firestore для обновления данных в реальном времени ---
         function setupFirestoreListeners() {
-            // Убедимся, что Firebase инициализирован и пользователь аутентифицирован
-            if (!window.isAuthReady || !window.db || !window.userId) {
-                console.log("Ожидание инициализации Firebase...");
-                setTimeout(setupFirestoreListeners, 500);
-                return;
-            }
-            
             // Если все готово, скрываем индикатор загрузки и показываем контент
             loadingIndicator.classList.add('hidden');
             contentContainer.classList.remove('hidden');
@@ -691,7 +668,6 @@
         // --- Инициализация приложения ---
         window.addEventListener('load', () => {
             requestNotificationPermission();
-            setupFirestoreListeners();
         });
         
     </script>
